@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect } from "react"
-import { Clock, Play, Square, Info, Wifi, WifiOff } from "lucide-react"
+import { Clock, Play, Pause, Info, Wifi, WifiOff } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -66,6 +66,14 @@ export default function TimeoutReminderApp() {
       return `${displayHour}:${minutes} ${ampm}`
     }
     return `${formatTime(activeHours.start)} - ${formatTime(activeHours.end)}`
+  }
+
+  const formatTime12Hour = (date: Date) => {
+    return date.toLocaleTimeString('en-US', { 
+      hour: 'numeric', 
+      minute: '2-digit', 
+      hour12: true 
+    })
   }
 
   const getProgressPercentage = (): number => {
@@ -166,12 +174,12 @@ export default function TimeoutReminderApp() {
                 {timeoutReminder.isActive && timeoutReminder.nextReminderTime && (
                   <div className="space-y-3">
                     <div className="p-4 bg-primary/10 border border-primary/20 rounded-lg">
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="font-medium text-primary">Next Reminder</p>
-                        <p className="text-sm text-muted-foreground">
-                          {timeoutReminder.nextReminderTime.toLocaleTimeString()}
-                        </p>
-                      </div>
+                                             <div className="flex items-center justify-between mb-2">
+                         <p className="font-medium text-primary">Next Reminder</p>
+                         <p className="text-sm text-muted-foreground">
+                           {formatTime12Hour(timeoutReminder.nextReminderTime)}
+                         </p>
+                       </div>
                       {timeoutReminder.timeUntilNextReminder && (
                         <div className="space-y-2">
                           <div className="flex items-center justify-between text-sm">
@@ -187,19 +195,23 @@ export default function TimeoutReminderApp() {
                   </div>
                 )}
 
-                {timeoutReminder.lastReminderTime && (
-                  <div className="p-4 bg-muted rounded-lg">
-                    <p className="font-medium">Last Reminder</p>
-                    <p className="text-sm text-muted-foreground">{timeoutReminder.lastReminderTime.toLocaleString()}</p>
-                  </div>
-                )}
+                                 {timeoutReminder.lastReminderTime && (
+                   <div className="p-4 bg-muted rounded-lg">
+                     <p className="font-medium">Last Reminder</p>
+                     <p className="text-sm text-muted-foreground">
+                       {formatTime12Hour(timeoutReminder.lastReminderTime)} on {timeoutReminder.lastReminderTime.toLocaleDateString()}
+                     </p>
+                   </div>
+                 )}
 
-                {timeoutReminder.sessionStartTime && (
-                  <div className="p-4 bg-secondary/50 rounded-lg">
-                    <p className="font-medium">Session Started</p>
-                    <p className="text-sm text-muted-foreground">{timeoutReminder.sessionStartTime.toLocaleString()}</p>
-                  </div>
-                )}
+                 {timeoutReminder.sessionStartTime && (
+                   <div className="p-4 bg-secondary/50 rounded-lg">
+                     <p className="font-medium">Session Started</p>
+                     <p className="text-sm text-muted-foreground">
+                       {formatTime12Hour(timeoutReminder.sessionStartTime)} on {timeoutReminder.sessionStartTime.toLocaleDateString()}
+                     </p>
+                   </div>
+                 )}
               </div>
             </CardContent>
           </Card>
@@ -222,14 +234,14 @@ export default function TimeoutReminderApp() {
                      {timeoutReminder.isStarting ? "Starting..." : "Start Timer"}
                    </Button>
                  ) : (
-                   <Button
-                     onClick={timeoutReminder.stopTimer}
-                     variant="destructive"
-                     className="flex items-center gap-2"
-                   >
-                     <Square className="h-4 w-4" />
-                     Stop Timer
-                   </Button>
+                                       <Button
+                      onClick={timeoutReminder.stopTimer}
+                      variant="destructive"
+                      className="flex items-center gap-2"
+                    >
+                      <Pause className="h-4 w-4" />
+                      Stop Timer
+                    </Button>
                  )}
                </div>
                              {!notification.isEnabled && (

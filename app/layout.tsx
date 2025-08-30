@@ -11,6 +11,9 @@ export const metadata: Metadata = {
   title: "Timeout Reminder",
   description: "Stay productive with smart timeout reminders",
   generator: "v0.app",
+  icons: {
+    icon: "/favicon.svg",
+  },
 }
 
 export default function RootLayout({

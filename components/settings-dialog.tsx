@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { TimeInput } from "@/components/ui/time-input"
 
 interface SettingsDialogProps {
   notificationsEnabled: boolean
@@ -122,20 +123,18 @@ export function SettingsDialog({
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="start-time">Start Time</Label>
-                  <Input
+                  <TimeInput
                     id="start-time"
-                    type="time"
                     value={localActiveHours.start}
-                    onChange={(e) => setLocalActiveHours({ ...localActiveHours, start: e.target.value })}
+                    onChange={(value) => setLocalActiveHours({ ...localActiveHours, start: value })}
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="end-time">End Time</Label>
-                  <Input
+                  <TimeInput
                     id="end-time"
-                    type="time"
                     value={localActiveHours.end}
-                    onChange={(e) => setLocalActiveHours({ ...localActiveHours, end: e.target.value })}
+                    onChange={(value) => setLocalActiveHours({ ...localActiveHours, end: value })}
                   />
                 </div>
               </div>
