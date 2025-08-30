@@ -38,7 +38,7 @@ export default function TimeoutReminderApp() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return
-    
+
     const hasShownWelcome = localStorage.getItem("hasShownWelcome")
     if (!hasShownWelcome && notification.isEnabled) {
       setTimeout(() => {
@@ -71,10 +71,10 @@ export default function TimeoutReminderApp() {
   }
 
   const formatTime12Hour = (date: Date) => {
-    return date.toLocaleTimeString('en-US', { 
-      hour: 'numeric', 
-      minute: '2-digit', 
-      hour12: true 
+    return date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
     })
   }
 
@@ -94,30 +94,30 @@ export default function TimeoutReminderApp() {
             <div className="flex items-center gap-2">
               <Clock className="h-6 w-6 text-primary" />
               <h1 className="text-xl font-semibold text-foreground">Timeout Reminder</h1>
-              {notification.hasBackgroundSupport && (
+              {/* {notification.hasBackgroundSupport && (
                 <Badge variant="outline" className="text-xs">
                   <Wifi className="h-3 w-3 mr-1" />
                   Background
                 </Badge>
-              )}
+              )} */}
             </div>
 
-                                      <div className="flex items-center gap-2">
-               <PWAInstallButton />
-               
-               <SettingsDialog
-                 notificationsEnabled={notification.isEnabled}
-                 onNotificationToggle={handleNotificationToggle}
-                 activeHours={activeHours}
-                 onActiveHoursChange={setActiveHours}
-                 timeoutInterval={timeoutInterval}
-                 onTimeoutIntervalChange={setTimeoutInterval}
-                 onTimerReset={timeoutReminder.resetTimer}
-               />
+            <div className="flex items-center gap-2">
+              <PWAInstallButton />
 
-               {/* Theme Toggle */}
-               <ThemeToggle />
-             </div>
+              <SettingsDialog
+                notificationsEnabled={notification.isEnabled}
+                onNotificationToggle={handleNotificationToggle}
+                activeHours={activeHours}
+                onActiveHoursChange={setActiveHours}
+                timeoutInterval={timeoutInterval}
+                onTimeoutIntervalChange={setTimeoutInterval}
+                onTimerReset={timeoutReminder.resetTimer}
+              />
+
+              {/* Theme Toggle */}
+              <ThemeToggle />
+            </div>
           </div>
         </div>
       </header>
@@ -178,12 +178,12 @@ export default function TimeoutReminderApp() {
                 {timeoutReminder.isActive && timeoutReminder.nextReminderTime && (
                   <div className="space-y-3">
                     <div className="p-4 bg-primary/10 border border-primary/20 rounded-lg">
-                                             <div className="flex items-center justify-between mb-2">
-                         <p className="font-medium text-primary">Next Reminder</p>
-                         <p className="text-sm text-muted-foreground">
-                           {formatTime12Hour(timeoutReminder.nextReminderTime)}
-                         </p>
-                       </div>
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="font-medium text-primary">Next Reminder</p>
+                        <p className="text-sm text-muted-foreground">
+                          {formatTime12Hour(timeoutReminder.nextReminderTime)}
+                        </p>
+                      </div>
                       {timeoutReminder.timeUntilNextReminder && (
                         <div className="space-y-2">
                           <div className="flex items-center justify-between text-sm">
@@ -199,23 +199,23 @@ export default function TimeoutReminderApp() {
                   </div>
                 )}
 
-                                 {timeoutReminder.lastReminderTime && (
-                   <div className="p-4 bg-muted rounded-lg">
-                     <p className="font-medium">Last Reminder</p>
-                     <p className="text-sm text-muted-foreground">
-                       {formatTime12Hour(timeoutReminder.lastReminderTime)} on {timeoutReminder.lastReminderTime.toLocaleDateString()}
-                     </p>
-                   </div>
-                 )}
+                {timeoutReminder.lastReminderTime && (
+                  <div className="p-4 bg-muted rounded-lg">
+                    <p className="font-medium">Last Reminder</p>
+                    <p className="text-sm text-muted-foreground">
+                      {formatTime12Hour(timeoutReminder.lastReminderTime)} on {timeoutReminder.lastReminderTime.toLocaleDateString()}
+                    </p>
+                  </div>
+                )}
 
-                 {timeoutReminder.sessionStartTime && (
-                   <div className="p-4 bg-secondary/50 rounded-lg">
-                     <p className="font-medium">Session Started</p>
-                     <p className="text-sm text-muted-foreground">
-                       {formatTime12Hour(timeoutReminder.sessionStartTime)} on {timeoutReminder.sessionStartTime.toLocaleDateString()}
-                     </p>
-                   </div>
-                 )}
+                {timeoutReminder.sessionStartTime && (
+                  <div className="p-4 bg-secondary/50 rounded-lg">
+                    <p className="font-medium">Session Started</p>
+                    <p className="text-sm text-muted-foreground">
+                      {formatTime12Hour(timeoutReminder.sessionStartTime)} on {timeoutReminder.sessionStartTime.toLocaleDateString()}
+                    </p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -227,79 +227,79 @@ export default function TimeoutReminderApp() {
               <CardDescription>Manually control your timeout reminder</CardDescription>
             </CardHeader>
             <CardContent>
-                             <div className="flex gap-2">
-                 {!timeoutReminder.isActive ? (
-                   <Button 
-                     onClick={timeoutReminder.startTimer} 
-                     disabled={timeoutReminder.isStarting || !notification.isEnabled}
-                     className="flex items-center gap-2"
-                   >
-                     <Play className="h-4 w-4" />
-                     {timeoutReminder.isStarting ? "Starting..." : "Start Timer"}
-                   </Button>
-                 ) : (
-                                       <Button
-                      onClick={timeoutReminder.stopTimer}
-                      variant="destructive"
-                      className="flex items-center gap-2"
-                    >
-                      <Pause className="h-4 w-4" />
-                      Stop Timer
-                    </Button>
-                 )}
-               </div>
-                             {!notification.isEnabled && (
-                 <p className="text-xs text-muted-foreground mt-3">
-                   Note: Enable notifications in settings to receive automatic timeout reminders
-                 </p>
-               )}
-               {notification.isEnabled && notification.hasBackgroundSupport && (
-                 <p className="text-xs text-success mt-3">
-                   ✓ Background notifications enabled - you'll receive reminders even when the app is closed
-                 </p>
-               )}
-               {timeoutReminder.isStarting && (
-                 <p className="text-xs text-blue-600 mt-3">
-                   ⏳ Starting timer...
-                 </p>
-               )}
-               {timeoutReminder.isActive && (
-                 <p className="text-xs text-green-600 mt-3">
-                   ✓ Timer is active and running
-                 </p>
-               )}
-               {!timeoutReminder.isWithinActiveHours && notification.isEnabled && (
-                 <p className="text-xs text-orange-600 mt-3">
-                   ⏰ Timer will start automatically when within active hours
-                 </p>
-               )}
+              <div className="flex gap-2">
+                {!timeoutReminder.isActive ? (
+                  <Button
+                    onClick={timeoutReminder.startTimer}
+                    disabled={timeoutReminder.isStarting || !notification.isEnabled}
+                    className="flex items-center gap-2"
+                  >
+                    <Play className="h-4 w-4" />
+                    {timeoutReminder.isStarting ? "Starting..." : "Start Timer"}
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={timeoutReminder.stopTimer}
+                    variant="destructive"
+                    className="flex items-center gap-2"
+                  >
+                    <Pause className="h-4 w-4" />
+                    Stop Timer
+                  </Button>
+                )}
+              </div>
+              {!notification.isEnabled && (
+                <p className="text-xs text-muted-foreground mt-3">
+                  Note: Enable notifications in settings to receive automatic timeout reminders
+                </p>
+              )}
+              {notification.isEnabled && notification.hasBackgroundSupport && (
+                <p className="text-xs text-success mt-3">
+                  ✓ Background notifications enabled - you'll receive reminders even when the app is closed
+                </p>
+              )}
+              {timeoutReminder.isStarting && (
+                <p className="text-xs text-blue-600 mt-3">
+                  ⏳ Starting timer...
+                </p>
+              )}
+              {timeoutReminder.isActive && (
+                <p className="text-xs text-green-600 mt-3">
+                  ✓ Timer is active and running
+                </p>
+              )}
+              {!timeoutReminder.isWithinActiveHours && notification.isEnabled && (
+                <p className="text-xs text-orange-600 mt-3">
+                  ⏰ Timer will start automatically when within active hours
+                </p>
+              )}
             </CardContent>
           </Card>
 
-                     {/* PWA Status Card */}
-           <PWAStatus />
+          {/* PWA Status Card */}
+          <PWAStatus />
 
-           {/* Notification Setup Card */}
-           {!notification.isEnabled && (
-             <Card>
-               <CardHeader>
-                 <CardTitle className="text-lg">Enable Notifications</CardTitle>
-                 <CardDescription>Allow notifications to receive timeout reminders</CardDescription>
-               </CardHeader>
-               <CardContent className="space-y-4">
-                 <Button className="w-full" onClick={() => handleNotificationToggle(true)}>
-                   Enable Push Notifications
-                 </Button>
-                 <p className="text-xs text-muted-foreground">
-                   {!notification.isSupported
-                     ? "Notifications are not supported in this browser"
-                     : "Please enable push notifications in your browser to get reminders"}
-                 </p>
-               </CardContent>
-             </Card>
-           )}
+          {/* Notification Setup Card */}
+          {!notification.isEnabled && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Enable Notifications</CardTitle>
+                <CardDescription>Allow notifications to receive timeout reminders</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Button className="w-full" onClick={() => handleNotificationToggle(true)}>
+                  Enable Push Notifications
+                </Button>
+                <p className="text-xs text-muted-foreground">
+                  {!notification.isSupported
+                    ? "Notifications are not supported in this browser"
+                    : "Please enable push notifications in your browser to get reminders"}
+                </p>
+              </CardContent>
+            </Card>
+          )}
 
-                      {/* Test notification section hidden
+          {/* Test notification section hidden
             {notification.isEnabled && (
               <Card>
                 <CardHeader>
@@ -321,12 +321,10 @@ export default function TimeoutReminderApp() {
               </Card>
             )}
             */}
-                 </div>
-       </main>
-       
-               {/* PWA Install Prompt - Hidden
-        <PWAInstallPrompt />
-        */}
-     </div>
-   )
- }
+        </div>
+      </main>
+
+             {/* PWA Install Prompt - Hidden */}
+    </div>
+  )
+}
