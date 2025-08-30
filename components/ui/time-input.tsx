@@ -74,7 +74,7 @@ export function TimeInput({ value, onChange, id, className }: TimeInputProps) {
   return (
     <div className={`flex gap-2 ${className}`}>
       <Select value={hour} onValueChange={handleHourChange}>
-        <SelectTrigger className="w-20 border border-input">
+        <SelectTrigger className="w-20">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -89,7 +89,7 @@ export function TimeInput({ value, onChange, id, className }: TimeInputProps) {
       <span className="flex items-center text-sm">:</span>
       
       <Select value={minute} onValueChange={handleMinuteChange}>
-        <SelectTrigger className="w-20 border border-input">
+        <SelectTrigger className="w-20">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -102,7 +102,7 @@ export function TimeInput({ value, onChange, id, className }: TimeInputProps) {
       </Select>
       
       <Select value={period} onValueChange={handlePeriodChange}>
-        <SelectTrigger className="w-24 border border-input">
+        <SelectTrigger className="w-24">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

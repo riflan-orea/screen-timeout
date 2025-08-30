@@ -175,13 +175,13 @@ export function SettingsDialog({
                           value: Math.max(1, Math.min(480, Number.parseInt(e.target.value) || 1)),
                         })
                       }
-                      className="flex-1 border border-input"
+                      className="flex-1"
                     />
                     <Select
                       value={localTimeoutInterval.unit}
                       onValueChange={(value) => setLocalTimeoutInterval({ ...localTimeoutInterval, unit: value })}
                     >
-                      <SelectTrigger className="w-32 border border-input">
+                      <SelectTrigger className="w-32">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
