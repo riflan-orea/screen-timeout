@@ -16,7 +16,8 @@ interface TimeoutReminderState {
   timeUntilNextReminder: number | null
   sessionStartTime: Date | null
   lastReminderTime: Date | null
-  isStarting: boolean // New state to track when timer is starting
+  isStarting: boolean
+  isManuallyStopped: boolean // New state to track manual stops
 }
 
 export function useTimeoutReminder(config: TimeoutReminderConfig, onTimeout: () => void) {
@@ -28,6 +29,7 @@ export function useTimeoutReminder(config: TimeoutReminderConfig, onTimeout: () 
     sessionStartTime: null,
     lastReminderTime: null,
     isStarting: false,
+    isManuallyStopped: false,
   })
 
   const timerRef = useRef<NodeJS.Timeout | null>(null)
@@ -63,25 +65,17 @@ export function useTimeoutReminder(config: TimeoutReminderConfig, onTimeout: () 
     if (typeof window === 'undefined') return
     
     const currentConfig = configRef.current
-    console.log('[TimeoutReminder] startTimer called:', {
-      isEnabled: currentConfig.isEnabled,
-      isWithinActiveHours: checkIsWithinActiveHours(currentConfig.activeHours),
-      activeHours: currentConfig.activeHours,
-      timeoutInterval: currentConfig.timeoutInterval
-    })
     
     // Set starting state to disable button
     setState(prev => ({ ...prev, isStarting: true }))
     
     // Check conditions
     if (!currentConfig.isEnabled) {
-      console.log('[TimeoutReminder] Timer not started - notifications not enabled')
       setState(prev => ({ ...prev, isStarting: false }))
       return
     }
     
     if (!checkIsWithinActiveHours(currentConfig.activeHours)) {
-      console.log('[TimeoutReminder] Timer not started - outside active hours')
       setState(prev => ({ ...prev, isStarting: false }))
       return
     }
@@ -113,14 +107,12 @@ export function useTimeoutReminder(config: TimeoutReminderConfig, onTimeout: () 
     // Save session start time
     localStorage.setItem("sessionStartTime", sessionStart.toISOString())
 
-    console.log(`[TimeoutReminder] Setting timer for ${timeUntilReminder}ms (${Math.floor(timeUntilReminder / 1000)}s)`)
-    console.log(`[TimeoutReminder] Next reminder at: ${nextReminderTime.format('YYYY-MM-DD HH:mm:ss')}`)
-
     // Update state
     setState(prev => ({
       ...prev,
       isActive: true,
       isStarting: false,
+      isManuallyStopped: false, // Clear manual stop flag
       nextReminderTime: nextReminderTime.toDate(),
       timeUntilNextReminder: timeUntilReminder,
       sessionStartTime: prev.sessionStartTime || sessionStart,
@@ -128,8 +120,6 @@ export function useTimeoutReminder(config: TimeoutReminderConfig, onTimeout: () 
 
     // Set the timeout
     timerRef.current = setTimeout(async () => {
-      console.log('[TimeoutReminder] Timer fired! Calling onTimeout callback')
-      
       const reminderTime = moment()
       localStorage.setItem("lastTimeoutReminderTime", reminderTime.toISOString())
 
@@ -140,7 +130,6 @@ export function useTimeoutReminder(config: TimeoutReminderConfig, onTimeout: () 
 
       try {
         await onTimeoutRef.current()
-        console.log('[TimeoutReminder] Notification sent successfully')
       } catch (error) {
         console.error('[TimeoutReminder] Error in onTimeout callback:', error)
       }
@@ -152,8 +141,6 @@ export function useTimeoutReminder(config: TimeoutReminderConfig, onTimeout: () 
 
   // Stop the timer
   const stopTimer = useCallback(() => {
-    console.log('[TimeoutReminder] Stopping timer')
-    
     if (timerRef.current) {
       clearTimeout(timerRef.current)
       timerRef.current = null
@@ -163,6 +150,7 @@ export function useTimeoutReminder(config: TimeoutReminderConfig, onTimeout: () 
       ...prev,
       isActive: false,
       isStarting: false,
+      isManuallyStopped: true, // Mark as manually stopped
       nextReminderTime: null,
       timeUntilNextReminder: null,
     }))
@@ -170,8 +158,6 @@ export function useTimeoutReminder(config: TimeoutReminderConfig, onTimeout: () 
 
   // Reset the timer
   const resetTimer = useCallback(() => {
-    console.log('[TimeoutReminder] Resetting timer')
-    
     if (typeof window === 'undefined') return
     
     if (timerRef.current) {
@@ -187,6 +173,7 @@ export function useTimeoutReminder(config: TimeoutReminderConfig, onTimeout: () 
       ...prev,
       isActive: false,
       isStarting: false,
+      isManuallyStopped: false, // Clear manual stop flag for reset
       sessionStartTime: newSessionStart,
       lastReminderTime: null,
       nextReminderTime: null,
@@ -249,26 +236,18 @@ export function useTimeoutReminder(config: TimeoutReminderConfig, onTimeout: () 
     }
   }, [checkIsWithinActiveHours])
 
-  // Auto-start/stop timer based on conditions
+  // Auto-start/stop timer based on conditions (but respect manual stops)
   useEffect(() => {
     const currentConfig = configRef.current
     const shouldBeActive = currentConfig.isEnabled && state.isWithinActiveHours
     
-    console.log('[TimeoutReminder] Auto-start/stop check:', {
-      isEnabled: currentConfig.isEnabled,
-      isWithinActiveHours: state.isWithinActiveHours,
-      isActive: state.isActive,
-      shouldBeActive
-    })
-
-    if (shouldBeActive && !state.isActive && !state.isStarting) {
-      console.log('[TimeoutReminder] Auto-starting timer')
+    // Only auto-start if not manually stopped
+    if (shouldBeActive && !state.isActive && !state.isStarting && !state.isManuallyStopped) {
       startTimer()
     } else if (!shouldBeActive && state.isActive) {
-      console.log('[TimeoutReminder] Auto-stopping timer')
       stopTimer()
     }
-  }, [config.isEnabled, state.isWithinActiveHours, state.isActive, state.isStarting, startTimer, stopTimer])
+  }, [config.isEnabled, state.isWithinActiveHours, state.isActive, state.isStarting, state.isManuallyStopped, startTimer, stopTimer])
 
   // Cleanup on unmount
   useEffect(() => {
