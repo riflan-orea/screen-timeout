@@ -9,6 +9,7 @@ import { Progress } from "@/components/ui/progress"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { SettingsDialog } from "@/components/settings-dialog"
+import { NotificationDialog } from "@/components/notification-dialog"
 import { PWAStatus } from "@/components/pwa-status"
 import { PWAInstallButton } from "@/components/pwa-install-button"
 import { useNotification } from "@/hooks/use-notification"
@@ -105,9 +106,13 @@ export default function TimeoutReminderApp() {
             <div className="flex items-center gap-2">
               <PWAInstallButton />
 
-              <SettingsDialog
+              <NotificationDialog
                 notificationsEnabled={notification.isEnabled}
                 onNotificationToggle={handleNotificationToggle}
+                hasBackgroundSupport={notification.hasBackgroundSupport}
+              />
+
+              <SettingsDialog
                 activeHours={activeHours}
                 onActiveHoursChange={setActiveHours}
                 timeoutInterval={timeoutInterval}

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Settings, Clock, Bell, Info } from "lucide-react"
+import { Settings, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -14,14 +14,10 @@ import {
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { TimeInput } from "@/components/ui/time-input"
 
 interface SettingsDialogProps {
-  notificationsEnabled: boolean
-  onNotificationToggle: (enabled: boolean) => void
   activeHours: { start: string; end: string }
   onActiveHoursChange: (hours: { start: string; end: string }) => void
   timeoutInterval: { value: number; unit: string }
@@ -30,8 +26,6 @@ interface SettingsDialogProps {
 }
 
 export function SettingsDialog({
-  notificationsEnabled,
-  onNotificationToggle,
   activeHours,
   onActiveHoursChange,
   timeoutInterval,
@@ -71,13 +65,7 @@ export function SettingsDialog({
     setIsOpen(false)
   }
 
-  const [canEnableNotifications, setCanEnableNotifications] = useState(false)
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setCanEnableNotifications("Notification" in window)
-    }
-  }, [])
 
   const isValidTimeRange = () => {
     const startMinutes =
@@ -184,61 +172,7 @@ export function SettingsDialog({
             </CardContent>
           </Card>
 
-          {/* Notifications Section */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Bell className="h-4 w-4" />
-                Notifications
-              </CardTitle>
-              <CardDescription>Manage how you receive timeout reminders</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <Label htmlFor="notifications-toggle">Push Notifications</Label>
-                  <p className="text-sm text-muted-foreground">Receive browser notifications for reminders</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  {!canEnableNotifications && (
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger>
-                          <Info className="h-4 w-4 text-muted-foreground" />
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Notifications not supported in this browser</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  )}
-                  <Switch
-                    id="notifications-toggle"
-                    checked={notificationsEnabled}
-                    onCheckedChange={onNotificationToggle}
-                    disabled={!canEnableNotifications}
-                  />
-                </div>
-              </div>
 
-              {!notificationsEnabled && canEnableNotifications && (
-                <div className="p-3 bg-muted rounded-lg">
-                  <p className="text-sm text-muted-foreground">
-                    Enable notifications to receive timeout reminders even when the app is in the background
-                  </p>
-                </div>
-              )}
-
-              {notificationsEnabled && (
-                <div className="p-3 bg-primary/10 border border-primary/20 rounded-lg">
-                  <p className="text-sm text-primary font-medium">Notifications Active</p>
-                  <p className="text-sm text-muted-foreground">
-                    You'll receive reminders with sound and vibration (if supported)
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
         </div>
 
         <div className="flex justify-end gap-2">
