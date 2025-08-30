@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect } from "react"
-import { Bell, Clock, Play, Square, RotateCcw, Info, Wifi, WifiOff } from "lucide-react"
+import { Clock, Play, Square, Info, Wifi, WifiOff } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -55,11 +55,7 @@ export default function TimeoutReminderApp() {
     }
   }
 
-  const handleTestNotification = async () => {
-    if (notification.isEnabled) {
-      await notification.showTimeoutReminder("This is a test notification with sound and vibration!")
-    }
-  }
+
 
   const formatActiveHours = () => {
     const formatTime = (time: string) => {
@@ -96,16 +92,8 @@ export default function TimeoutReminderApp() {
               )}
             </div>
 
-            <div className="flex items-center gap-2">
-              {/* Notification Bell */}
-              <Button variant="ghost" size="icon" className="relative" onClick={handleTestNotification}>
-                <Bell className={`h-5 w-5 ${notification.isEnabled ? "text-primary" : "text-muted-foreground"}`} />
-                {notification.isEnabled && (
-                  <div className="absolute -top-1 -right-1 h-3 w-3 bg-primary rounded-full animate-pulse" />
-                )}
-              </Button>
-
-              <SettingsDialog
+                         <div className="flex items-center gap-2">
+               <SettingsDialog
                 notificationsEnabled={notification.isEnabled}
                 onNotificationToggle={handleNotificationToggle}
                 activeHours={activeHours}
@@ -236,22 +224,13 @@ export default function TimeoutReminderApp() {
                  ) : (
                    <Button
                      onClick={timeoutReminder.stopTimer}
-                     variant="outline"
-                     className="flex items-center gap-2 bg-transparent"
+                     variant="destructive"
+                     className="flex items-center gap-2"
                    >
                      <Square className="h-4 w-4" />
                      Stop Timer
                    </Button>
                  )}
-                 <Button
-                   onClick={timeoutReminder.resetTimer}
-                   variant="outline"
-                   disabled={timeoutReminder.isStarting}
-                   className="flex items-center gap-2 bg-transparent"
-                 >
-                   <RotateCcw className="h-4 w-4" />
-                   Reset Timer
-                 </Button>
                </div>
                              {!notification.isEnabled && (
                  <p className="text-xs text-muted-foreground mt-3">
@@ -301,26 +280,28 @@ export default function TimeoutReminderApp() {
             </Card>
           )}
 
-          {notification.isEnabled && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Test Notifications</CardTitle>
-                <CardDescription>
-                  Test your notification settings
-                  {notification.hasBackgroundSupport && " (Background support active)"}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button variant="outline" className="w-full bg-transparent" onClick={handleTestNotification}>
-                  Send Test Notification
-                </Button>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Click to test notification with sound and vibration
-                  {notification.hasBackgroundSupport && " • Works even when app is closed"}
-                </p>
-              </CardContent>
-            </Card>
-          )}
+                     {/* Test notification section hidden
+           {notification.isEnabled && (
+             <Card>
+               <CardHeader>
+                 <CardTitle className="text-lg">Test Notifications</CardTitle>
+                 <CardDescription>
+                   Test your notification settings
+                   {notification.hasBackgroundSupport && " (Background support active)"}
+                 </CardDescription>
+               </CardHeader>
+               <CardContent>
+                 <Button variant="outline" className="w-full bg-transparent" onClick={handleTestNotification}>
+                   Send Test Notification
+                 </Button>
+                 <p className="text-xs text-muted-foreground mt-2">
+                   Click to test notification with sound and vibration
+                   {notification.hasBackgroundSupport && " • Works even when app is closed"}
+                 </p>
+               </CardContent>
+             </Card>
+           )}
+           */}
         </div>
       </main>
     </div>
