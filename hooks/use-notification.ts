@@ -28,6 +28,8 @@ export function useNotification() {
 
   // Initialize notification state
   useEffect(() => {
+    if (typeof window === 'undefined') return
+    
     const isSupported = "Notification" in window
     const permission = isSupported ? Notification.permission : "denied"
 
@@ -57,7 +59,9 @@ export function useNotification() {
       setState((prev) => ({ ...prev, permission }))
 
       // Store permission state
-      localStorage.setItem("notificationPermission", permission)
+      if (typeof window !== 'undefined') {
+        localStorage.setItem("notificationPermission", permission)
+      }
 
       return permission === "granted"
     } catch (error) {
@@ -68,6 +72,8 @@ export function useNotification() {
 
   // Play notification sound
   const playNotificationSound = useCallback(() => {
+    if (typeof window === 'undefined') return
+    
     try {
       // Create audio context for notification sound
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
@@ -124,7 +130,9 @@ export function useNotification() {
 
           // Handle notification click
           notification.onclick = () => {
-            window.focus()
+            if (typeof window !== 'undefined') {
+              window.focus()
+            }
             notification.close()
           }
 
@@ -143,7 +151,9 @@ export function useNotification() {
           })
 
           notification.onclick = () => {
-            window.focus()
+            if (typeof window !== 'undefined') {
+              window.focus()
+            }
             notification.close()
           }
 
@@ -158,7 +168,9 @@ export function useNotification() {
 
         // Store notification time
         const now = Date.now()
-        localStorage.setItem("lastNotificationTime", now.toString())
+        if (typeof window !== 'undefined') {
+          localStorage.setItem("lastNotificationTime", now.toString())
+        }
         setState((prev) => ({ ...prev, lastNotificationTime: now }))
 
         return true

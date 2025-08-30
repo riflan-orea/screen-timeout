@@ -60,6 +60,8 @@ export function useTimeoutReminder(config: TimeoutReminderConfig, onTimeout: () 
   }
 
   const startTimer = useCallback(() => {
+    if (typeof window === 'undefined') return
+    
     const currentConfig = configRef.current
     if (!currentConfig.isEnabled || !checkIsWithinActiveHours(currentConfig.activeHours)) {
       return
@@ -128,6 +130,8 @@ export function useTimeoutReminder(config: TimeoutReminderConfig, onTimeout: () 
   }, [])
 
   const resetTimer = useCallback(() => {
+    if (typeof window === 'undefined') return
+    
     if (timerRef.current) {
       clearTimeout(timerRef.current)
       timerRef.current = null
@@ -153,6 +157,8 @@ export function useTimeoutReminder(config: TimeoutReminderConfig, onTimeout: () 
   }, [startTimer])
 
   useEffect(() => {
+    if (typeof window === 'undefined') return
+    
     const savedSessionStart = localStorage.getItem("sessionStartTime")
     if (savedSessionStart) {
       setState((prev) => ({

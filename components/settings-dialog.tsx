@@ -70,7 +70,13 @@ export function SettingsDialog({
     setIsOpen(false)
   }
 
-  const canEnableNotifications = "Notification" in window
+  const [canEnableNotifications, setCanEnableNotifications] = useState(false)
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setCanEnableNotifications("Notification" in window)
+    }
+  }, [])
 
   const isValidTimeRange = () => {
     const startMinutes =

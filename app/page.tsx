@@ -30,6 +30,8 @@ export default function TimeoutReminderApp() {
   )
 
   useEffect(() => {
+    if (typeof window === 'undefined') return
+    
     const hasShownWelcome = localStorage.getItem("hasShownWelcome")
     if (!hasShownWelcome && notification.isEnabled) {
       setTimeout(() => {
