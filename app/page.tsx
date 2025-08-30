@@ -9,6 +9,8 @@ import { Progress } from "@/components/ui/progress"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { SettingsDialog } from "@/components/settings-dialog"
+import { PWAStatus } from "@/components/pwa-status"
+import { PWAInstallPrompt } from "@/components/pwa-install-prompt"
 import { useNotification } from "@/hooks/use-notification"
 import { useLocalStorage } from "@/hooks/use-local-storage"
 import { useTimeoutReminder } from "@/hooks/use-timeout-reminder"
@@ -272,50 +274,56 @@ export default function TimeoutReminderApp() {
             </CardContent>
           </Card>
 
-          {/* Notification Setup Card */}
-          {!notification.isEnabled && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Enable Notifications</CardTitle>
-                <CardDescription>Allow notifications to receive timeout reminders</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <Button className="w-full" onClick={() => handleNotificationToggle(true)}>
-                  Enable Push Notifications
-                </Button>
-                <p className="text-xs text-muted-foreground">
-                  {!notification.isSupported
-                    ? "Notifications are not supported in this browser"
-                    : "Please enable push notifications in your browser to get reminders"}
-                </p>
-              </CardContent>
-            </Card>
-          )}
+                     {/* PWA Status Card */}
+           <PWAStatus />
 
-                     {/* Test notification section hidden
-           {notification.isEnabled && (
+           {/* Notification Setup Card */}
+           {!notification.isEnabled && (
              <Card>
                <CardHeader>
-                 <CardTitle className="text-lg">Test Notifications</CardTitle>
-                 <CardDescription>
-                   Test your notification settings
-                   {notification.hasBackgroundSupport && " (Background support active)"}
-                 </CardDescription>
+                 <CardTitle className="text-lg">Enable Notifications</CardTitle>
+                 <CardDescription>Allow notifications to receive timeout reminders</CardDescription>
                </CardHeader>
-               <CardContent>
-                 <Button variant="outline" className="w-full bg-transparent" onClick={handleTestNotification}>
-                   Send Test Notification
+               <CardContent className="space-y-4">
+                 <Button className="w-full" onClick={() => handleNotificationToggle(true)}>
+                   Enable Push Notifications
                  </Button>
-                 <p className="text-xs text-muted-foreground mt-2">
-                   Click to test notification with sound and vibration
-                   {notification.hasBackgroundSupport && " • Works even when app is closed"}
+                 <p className="text-xs text-muted-foreground">
+                   {!notification.isSupported
+                     ? "Notifications are not supported in this browser"
+                     : "Please enable push notifications in your browser to get reminders"}
                  </p>
                </CardContent>
              </Card>
            )}
-           */}
-        </div>
-      </main>
-    </div>
-  )
-}
+
+                      {/* Test notification section hidden
+            {notification.isEnabled && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Test Notifications</CardTitle>
+                  <CardDescription>
+                    Test your notification settings
+                    {notification.hasBackgroundSupport && " (Background support active)"}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button variant="outline" className="w-full bg-transparent" onClick={handleTestNotification}>
+                    Send Test Notification
+                  </Button>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Click to test notification with sound and vibration
+                    {notification.hasBackgroundSupport && " • Works even when app is closed"}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+            */}
+                 </div>
+       </main>
+       
+       {/* PWA Install Prompt */}
+       <PWAInstallPrompt />
+     </div>
+   )
+ }
