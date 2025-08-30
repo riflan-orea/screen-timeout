@@ -17,7 +17,8 @@ interface TimeoutReminderState {
   sessionStartTime: Date | null
   lastReminderTime: Date | null
   isStarting: boolean
-  isManuallyStopped: boolean // New state to track manual stops
+  isManuallyStopped: boolean // Track manual stops
+  stopDate: string | null // Track the date when timer was manually stopped
 }
 
 export function useTimeoutReminder(config: TimeoutReminderConfig, onTimeout: () => void) {
@@ -30,6 +31,7 @@ export function useTimeoutReminder(config: TimeoutReminderConfig, onTimeout: () 
     lastReminderTime: null,
     isStarting: false,
     isManuallyStopped: false,
+    stopDate: null,
   })
 
   const timerRef = useRef<NodeJS.Timeout | null>(null)
@@ -107,12 +109,16 @@ export function useTimeoutReminder(config: TimeoutReminderConfig, onTimeout: () 
     // Save session start time
     localStorage.setItem("sessionStartTime", sessionStart.toISOString())
 
+    // Clear stop date from localStorage when starting
+    localStorage.removeItem("timerStopDate")
+
     // Update state
     setState(prev => ({
       ...prev,
       isActive: true,
       isStarting: false,
       isManuallyStopped: false, // Clear manual stop flag
+      stopDate: null,
       nextReminderTime: nextReminderTime.toDate(),
       timeUntilNextReminder: timeUntilReminder,
       sessionStartTime: prev.sessionStartTime || sessionStart,
@@ -139,18 +145,31 @@ export function useTimeoutReminder(config: TimeoutReminderConfig, onTimeout: () 
     }, Math.max(timeUntilReminder, 0))
   }, [checkIsWithinActiveHours, getTimeoutIntervalMs])
 
+  // Check if it's a new day since the timer was stopped
+  const isNewDaySinceStop = useCallback((stopDate: string): boolean => {
+    const stopMoment = moment(stopDate, 'YYYY-MM-DD')
+    const today = moment().startOf('day')
+    return stopMoment.isBefore(today)
+  }, [])
+
   // Stop the timer
   const stopTimer = useCallback(() => {
+    if (typeof window === 'undefined') return
+    
     if (timerRef.current) {
       clearTimeout(timerRef.current)
       timerRef.current = null
     }
+
+    const today = moment().format('YYYY-MM-DD')
+    localStorage.setItem("timerStopDate", today)
 
     setState(prev => ({
       ...prev,
       isActive: false,
       isStarting: false,
       isManuallyStopped: true, // Mark as manually stopped
+      stopDate: today,
       nextReminderTime: null,
       timeUntilNextReminder: null,
     }))
@@ -167,6 +186,7 @@ export function useTimeoutReminder(config: TimeoutReminderConfig, onTimeout: () 
 
     const newSessionStart = new Date()
     localStorage.removeItem("lastTimeoutReminderTime")
+    localStorage.removeItem("timerStopDate")
     localStorage.setItem("sessionStartTime", newSessionStart.toISOString())
 
     setState(prev => ({
@@ -174,6 +194,7 @@ export function useTimeoutReminder(config: TimeoutReminderConfig, onTimeout: () 
       isActive: false,
       isStarting: false,
       isManuallyStopped: false, // Clear manual stop flag for reset
+      stopDate: null,
       sessionStartTime: newSessionStart,
       lastReminderTime: null,
       nextReminderTime: null,
@@ -205,7 +226,24 @@ export function useTimeoutReminder(config: TimeoutReminderConfig, onTimeout: () 
         lastReminderTime: new Date(savedLastReminder),
       }))
     }
-  }, [])
+
+    // Load saved stop date and check if it's a new day
+    const savedStopDate = localStorage.getItem("timerStopDate")
+    if (savedStopDate) {
+      const isNewDay = isNewDaySinceStop(savedStopDate)
+      
+      setState(prev => ({
+        ...prev,
+        stopDate: savedStopDate,
+        isManuallyStopped: !isNewDay, // Only consider manually stopped if it's not a new day
+      }))
+
+      // If it's a new day, clear the stop date from localStorage
+      if (isNewDay) {
+        localStorage.removeItem("timerStopDate")
+      }
+    }
+  }, [isNewDaySinceStop])
 
   // Update timer display every second
   useEffect(() => {
