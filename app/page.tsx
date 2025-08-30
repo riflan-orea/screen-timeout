@@ -10,7 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { SettingsDialog } from "@/components/settings-dialog"
 import { PWAStatus } from "@/components/pwa-status"
-import { PWAInstallPrompt } from "@/components/pwa-install-prompt"
+import { PWAInstallButton } from "@/components/pwa-install-button"
 import { useNotification } from "@/hooks/use-notification"
 import { useLocalStorage } from "@/hooks/use-local-storage"
 import { useTimeoutReminder } from "@/hooks/use-timeout-reminder"
@@ -102,20 +102,22 @@ export default function TimeoutReminderApp() {
               )}
             </div>
 
-                         <div className="flex items-center gap-2">
+                                      <div className="flex items-center gap-2">
+               <PWAInstallButton />
+               
                <SettingsDialog
-                notificationsEnabled={notification.isEnabled}
-                onNotificationToggle={handleNotificationToggle}
-                activeHours={activeHours}
-                onActiveHoursChange={setActiveHours}
-                timeoutInterval={timeoutInterval}
-                onTimeoutIntervalChange={setTimeoutInterval}
-                onTimerReset={timeoutReminder.resetTimer}
-              />
+                 notificationsEnabled={notification.isEnabled}
+                 onNotificationToggle={handleNotificationToggle}
+                 activeHours={activeHours}
+                 onActiveHoursChange={setActiveHours}
+                 timeoutInterval={timeoutInterval}
+                 onTimeoutIntervalChange={setTimeoutInterval}
+                 onTimerReset={timeoutReminder.resetTimer}
+               />
 
-              {/* Theme Toggle */}
-              <ThemeToggle />
-            </div>
+               {/* Theme Toggle */}
+               <ThemeToggle />
+             </div>
           </div>
         </div>
       </header>
@@ -322,8 +324,9 @@ export default function TimeoutReminderApp() {
                  </div>
        </main>
        
-       {/* PWA Install Prompt */}
-       <PWAInstallPrompt />
+               {/* PWA Install Prompt - Hidden
+        <PWAInstallPrompt />
+        */}
      </div>
    )
  }
