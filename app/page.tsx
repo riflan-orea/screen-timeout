@@ -32,7 +32,7 @@ export default function TimeoutReminderApp() {
       isEnabled: notification.isEnabled,
     },
     async () => {
-      await notification.showTimeoutReminder(`Time for a break! You've been working for ${formatTimeoutInterval()}.`)
+      await notification.showTimeoutReminder(`⏰ Time for a break! You've been working for ${formatTimeoutInterval()}.`)
     },
   )
 
@@ -93,7 +93,7 @@ export default function TimeoutReminderApp() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Clock className="h-6 w-6 text-primary" />
-              <h1 className="text-xl font-semibold text-foreground">Timeout Reminder</h1>
+              <h1 className="text-xl font-semibold text-foreground">Timeout</h1>
               {/* {notification.hasBackgroundSupport && (
                 <Badge variant="outline" className="text-xs">
                   <Wifi className="h-3 w-3 mr-1" />
