@@ -24,7 +24,7 @@ export function PWAInstallButton() {
     // Check if app is already installed
     const checkInstallStatus = () => {
       const standalone = window.matchMedia('(display-mode: standalone)').matches
-      const inApp = window.navigator.standalone === true
+      const inApp = (window.navigator as any).standalone === true
       const installed = standalone || inApp
       
       setIsInstalled(installed)

@@ -277,7 +277,7 @@ export default function TimeoutReminderApp() {
           </Card>
 
           {/* PWA Status Card */}
-          <PWAStatus />
+          {/* <PWAStatus /> */}
 
           {/* Notification Setup Card */}
           {!notification.isEnabled && (
