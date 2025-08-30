@@ -112,6 +112,9 @@ export function useNotification() {
 
   const showNotification = useCallback(
     async (options: NotificationOptions): Promise<boolean> => {
+      console.log('[Notification] showNotification called:', options)
+      console.log('[Notification] Current state:', { isSupported: state.isSupported, permission: state.permission })
+      
       if (!state.isSupported || state.permission !== "granted") {
         console.warn("Cannot show notification: not supported or permission denied")
         return false
@@ -198,12 +201,15 @@ export function useNotification() {
   // Show timeout reminder notification
   const showTimeoutReminder = useCallback(
     async (message?: string): Promise<boolean> => {
-      return showNotification({
+      console.log('[Notification] showTimeoutReminder called with message:', message)
+      const result = await showNotification({
         title: "Timeout Reminder",
         body: message || "Time for a break! You've been working for a while.",
         tag: "timeout-reminder",
         requireInteraction: true,
       })
+      console.log('[Notification] showTimeoutReminder result:', result)
+      return result
     },
     [showNotification],
   )

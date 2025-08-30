@@ -18,6 +18,11 @@ export default function TimeoutReminderApp() {
   const [activeHours, setActiveHours] = useLocalStorage("activeHours", { start: "09:00", end: "18:00" })
   const [timeoutInterval, setTimeoutInterval] = useLocalStorage("timeoutInterval", { value: 1, unit: "hours" })
 
+  const formatTimeoutInterval = () => {
+    const { value, unit } = timeoutInterval
+    return `${value} ${unit === "hours" ? (value === 1 ? "hour" : "hours") : value === 1 ? "minute" : "minutes"}`
+  }
+
   const timeoutReminder = useTimeoutReminder(
     {
       activeHours,
@@ -54,11 +59,6 @@ export default function TimeoutReminderApp() {
     if (notification.isEnabled) {
       await notification.showTimeoutReminder("This is a test notification with sound and vibration!")
     }
-  }
-
-  const formatTimeoutInterval = () => {
-    const { value, unit } = timeoutInterval
-    return `${value} ${unit === "hours" ? (value === 1 ? "hour" : "hours") : value === 1 ? "minute" : "minutes"}`
   }
 
   const formatActiveHours = () => {
@@ -223,41 +223,61 @@ export default function TimeoutReminderApp() {
               <CardDescription>Manually control your timeout reminder</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex gap-2">
-                {!timeoutReminder.isActive ? (
-                  <Button onClick={timeoutReminder.startTimer} className="flex items-center gap-2">
-                    <Play className="h-4 w-4" />
-                    Start Timer
-                  </Button>
-                ) : (
-                  <Button
-                    onClick={timeoutReminder.stopTimer}
-                    variant="outline"
-                    className="flex items-center gap-2 bg-transparent"
-                  >
-                    <Square className="h-4 w-4" />
-                    Stop Timer
-                  </Button>
-                )}
-                <Button
-                  onClick={timeoutReminder.resetTimer}
-                  variant="outline"
-                  className="flex items-center gap-2 bg-transparent"
-                >
-                  <RotateCcw className="h-4 w-4" />
-                  Reset Timer
-                </Button>
-              </div>
-              {!notification.isEnabled && (
-                <p className="text-xs text-muted-foreground mt-3">
-                  Note: Enable notifications in settings to receive automatic timeout reminders
-                </p>
-              )}
-              {notification.isEnabled && notification.hasBackgroundSupport && (
-                <p className="text-xs text-success mt-3">
-                  ✓ Background notifications enabled - you'll receive reminders even when the app is closed
-                </p>
-              )}
+                             <div className="flex gap-2">
+                 {!timeoutReminder.isActive ? (
+                   <Button 
+                     onClick={timeoutReminder.startTimer} 
+                     disabled={timeoutReminder.isStarting || !notification.isEnabled}
+                     className="flex items-center gap-2"
+                   >
+                     <Play className="h-4 w-4" />
+                     {timeoutReminder.isStarting ? "Starting..." : "Start Timer"}
+                   </Button>
+                 ) : (
+                   <Button
+                     onClick={timeoutReminder.stopTimer}
+                     variant="outline"
+                     className="flex items-center gap-2 bg-transparent"
+                   >
+                     <Square className="h-4 w-4" />
+                     Stop Timer
+                   </Button>
+                 )}
+                 <Button
+                   onClick={timeoutReminder.resetTimer}
+                   variant="outline"
+                   disabled={timeoutReminder.isStarting}
+                   className="flex items-center gap-2 bg-transparent"
+                 >
+                   <RotateCcw className="h-4 w-4" />
+                   Reset Timer
+                 </Button>
+               </div>
+                             {!notification.isEnabled && (
+                 <p className="text-xs text-muted-foreground mt-3">
+                   Note: Enable notifications in settings to receive automatic timeout reminders
+                 </p>
+               )}
+               {notification.isEnabled && notification.hasBackgroundSupport && (
+                 <p className="text-xs text-success mt-3">
+                   ✓ Background notifications enabled - you'll receive reminders even when the app is closed
+                 </p>
+               )}
+               {timeoutReminder.isStarting && (
+                 <p className="text-xs text-blue-600 mt-3">
+                   ⏳ Starting timer...
+                 </p>
+               )}
+               {timeoutReminder.isActive && (
+                 <p className="text-xs text-green-600 mt-3">
+                   ✓ Timer is active and running
+                 </p>
+               )}
+               {!timeoutReminder.isWithinActiveHours && notification.isEnabled && (
+                 <p className="text-xs text-orange-600 mt-3">
+                   ⏰ Timer will start automatically when within active hours
+                 </p>
+               )}
             </CardContent>
           </Card>
 

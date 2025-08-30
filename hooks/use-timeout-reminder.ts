@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
+import moment from "moment"
 
 interface TimeoutReminderConfig {
   activeHours: { start: string; end: string }
@@ -15,6 +16,7 @@ interface TimeoutReminderState {
   timeUntilNextReminder: number | null
   sessionStartTime: Date | null
   lastReminderTime: Date | null
+  isStarting: boolean // New state to track when timer is starting
 }
 
 export function useTimeoutReminder(config: TimeoutReminderConfig, onTimeout: () => void) {
@@ -25,111 +27,151 @@ export function useTimeoutReminder(config: TimeoutReminderConfig, onTimeout: () 
     timeUntilNextReminder: null,
     sessionStartTime: null,
     lastReminderTime: null,
+    isStarting: false,
   })
 
   const timerRef = useRef<NodeJS.Timeout | null>(null)
-  const checkIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const updateIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const configRef = useRef(config)
   const onTimeoutRef = useRef(onTimeout)
 
   configRef.current = config
   onTimeoutRef.current = onTimeout
 
-  const timeToMinutes = (timeString: string): number => {
-    const [hours, minutes] = timeString.split(":").map(Number)
-    return hours * 60 + minutes
-  }
-
-  const checkIsWithinActiveHours = (activeHours: { start: string; end: string }): boolean => {
-    const now = new Date()
-    const currentMinutes = now.getHours() * 60 + now.getMinutes()
-    const startMinutes = timeToMinutes(activeHours.start)
-    const endMinutes = timeToMinutes(activeHours.end)
-
-    if (startMinutes <= endMinutes) {
-      return currentMinutes >= startMinutes && currentMinutes <= endMinutes
+  // Check if current time is within active hours
+  const checkIsWithinActiveHours = useCallback((activeHours: { start: string; end: string }): boolean => {
+    const now = moment()
+    const startTime = moment(activeHours.start, "HH:mm")
+    const endTime = moment(activeHours.end, "HH:mm")
+    
+    // Handle overnight periods (e.g., 22:00 to 06:00)
+    if (endTime.isBefore(startTime)) {
+      return now.isAfter(startTime) || now.isBefore(endTime)
     } else {
-      return currentMinutes >= startMinutes || currentMinutes <= endMinutes
+      return now.isBetween(startTime, endTime, null, '[]') // inclusive
     }
-  }
+  }, [])
 
-  const getTimeoutIntervalMs = (timeoutInterval: { value: number; unit: string }): number => {
+  // Convert interval to milliseconds
+  const getTimeoutIntervalMs = useCallback((timeoutInterval: { value: number; unit: string }): number => {
     const { value, unit } = timeoutInterval
-    const multiplier = unit === "hours" ? 60 * 60 * 1000 : 60 * 1000
-    return value * multiplier
-  }
+    return moment.duration(value, unit as moment.DurationInputArg2).asMilliseconds()
+  }, [])
 
-  const startTimer = useCallback(() => {
+  // Start the timer
+  const startTimer = useCallback(async () => {
     if (typeof window === 'undefined') return
     
     const currentConfig = configRef.current
-    if (!currentConfig.isEnabled || !checkIsWithinActiveHours(currentConfig.activeHours)) {
+    console.log('[TimeoutReminder] startTimer called:', {
+      isEnabled: currentConfig.isEnabled,
+      isWithinActiveHours: checkIsWithinActiveHours(currentConfig.activeHours),
+      activeHours: currentConfig.activeHours,
+      timeoutInterval: currentConfig.timeoutInterval
+    })
+    
+    // Set starting state to disable button
+    setState(prev => ({ ...prev, isStarting: true }))
+    
+    // Check conditions
+    if (!currentConfig.isEnabled) {
+      console.log('[TimeoutReminder] Timer not started - notifications not enabled')
+      setState(prev => ({ ...prev, isStarting: false }))
+      return
+    }
+    
+    if (!checkIsWithinActiveHours(currentConfig.activeHours)) {
+      console.log('[TimeoutReminder] Timer not started - outside active hours')
+      setState(prev => ({ ...prev, isStarting: false }))
       return
     }
 
-    const now = new Date()
-    const intervalMs = getTimeoutIntervalMs(currentConfig.timeoutInterval)
-
-    const lastReminderStr = localStorage.getItem("lastTimeoutReminderTime")
-    const lastReminderTime = lastReminderStr ? new Date(lastReminderStr) : null
-
-    let nextReminderTime: Date
-    if (lastReminderTime) {
-      const nextTime = new Date(lastReminderTime.getTime() + intervalMs)
-      nextReminderTime = nextTime > now ? nextTime : new Date(now.getTime() + intervalMs)
-    } else {
-      nextReminderTime = new Date(now.getTime() + intervalMs)
-    }
-
-    const timeUntilReminder = nextReminderTime.getTime() - now.getTime()
-    const sessionStart = new Date()
-
-    localStorage.setItem("sessionStartTime", sessionStart.toISOString())
-
-    setState((prev) => ({
-      ...prev,
-      isActive: true,
-      nextReminderTime,
-      timeUntilNextReminder: timeUntilReminder,
-      sessionStartTime: prev.sessionStartTime || sessionStart,
-    }))
-
-    if (timerRef.current) {
-      clearTimeout(timerRef.current)
-    }
-
-    timerRef.current = setTimeout(
-      () => {
-        const reminderTime = new Date()
-        localStorage.setItem("lastTimeoutReminderTime", reminderTime.toISOString())
-
-        setState((prev) => ({
-          ...prev,
-          lastReminderTime: reminderTime,
-        }))
-
-        onTimeoutRef.current()
-        startTimer()
-      },
-      Math.max(timeUntilReminder, 0),
-    )
-  }, []) // Empty dependency array to prevent recreation
-
-  const stopTimer = useCallback(() => {
+    // Clear any existing timer
     if (timerRef.current) {
       clearTimeout(timerRef.current)
       timerRef.current = null
     }
 
-    setState((prev) => ({
+    const now = moment()
+    const intervalMs = getTimeoutIntervalMs(currentConfig.timeoutInterval)
+    
+    // Check if there was a previous reminder and calculate next time
+    const lastReminderStr = localStorage.getItem("lastTimeoutReminderTime")
+    let nextReminderTime: moment.Moment
+    
+    if (lastReminderStr) {
+      const lastReminder = moment(lastReminderStr)
+      const nextTime = lastReminder.add(intervalMs, 'milliseconds')
+      nextReminderTime = nextTime.isAfter(now) ? nextTime : now.add(intervalMs, 'milliseconds')
+    } else {
+      nextReminderTime = now.add(intervalMs, 'milliseconds')
+    }
+
+    const timeUntilReminder = nextReminderTime.diff(now)
+    const sessionStart = now.toDate()
+
+    // Save session start time
+    localStorage.setItem("sessionStartTime", sessionStart.toISOString())
+
+    console.log(`[TimeoutReminder] Setting timer for ${timeUntilReminder}ms (${Math.floor(timeUntilReminder / 1000)}s)`)
+    console.log(`[TimeoutReminder] Next reminder at: ${nextReminderTime.format('YYYY-MM-DD HH:mm:ss')}`)
+
+    // Update state
+    setState(prev => ({
+      ...prev,
+      isActive: true,
+      isStarting: false,
+      nextReminderTime: nextReminderTime.toDate(),
+      timeUntilNextReminder: timeUntilReminder,
+      sessionStartTime: prev.sessionStartTime || sessionStart,
+    }))
+
+    // Set the timeout
+    timerRef.current = setTimeout(async () => {
+      console.log('[TimeoutReminder] Timer fired! Calling onTimeout callback')
+      
+      const reminderTime = moment()
+      localStorage.setItem("lastTimeoutReminderTime", reminderTime.toISOString())
+
+      setState(prev => ({
+        ...prev,
+        lastReminderTime: reminderTime.toDate(),
+      }))
+
+      try {
+        await onTimeoutRef.current()
+        console.log('[TimeoutReminder] Notification sent successfully')
+      } catch (error) {
+        console.error('[TimeoutReminder] Error in onTimeout callback:', error)
+      }
+
+      // Restart timer for next interval
+      startTimer()
+    }, Math.max(timeUntilReminder, 0))
+  }, [checkIsWithinActiveHours, getTimeoutIntervalMs])
+
+  // Stop the timer
+  const stopTimer = useCallback(() => {
+    console.log('[TimeoutReminder] Stopping timer')
+    
+    if (timerRef.current) {
+      clearTimeout(timerRef.current)
+      timerRef.current = null
+    }
+
+    setState(prev => ({
       ...prev,
       isActive: false,
+      isStarting: false,
       nextReminderTime: null,
       timeUntilNextReminder: null,
     }))
   }, [])
 
+  // Reset the timer
   const resetTimer = useCallback(() => {
+    console.log('[TimeoutReminder] Resetting timer')
+    
     if (typeof window === 'undefined') return
     
     if (timerRef.current) {
@@ -138,30 +180,32 @@ export function useTimeoutReminder(config: TimeoutReminderConfig, onTimeout: () 
     }
 
     const newSessionStart = new Date()
+    localStorage.removeItem("lastTimeoutReminderTime")
+    localStorage.setItem("sessionStartTime", newSessionStart.toISOString())
 
-    setState((prev) => ({
+    setState(prev => ({
       ...prev,
       isActive: false,
+      isStarting: false,
       sessionStartTime: newSessionStart,
       lastReminderTime: null,
       nextReminderTime: null,
       timeUntilNextReminder: null,
     }))
 
-    localStorage.removeItem("lastTimeoutReminderTime")
-    localStorage.setItem("sessionStartTime", newSessionStart.toISOString())
-
+    // Start timer after a short delay
     setTimeout(() => {
       startTimer()
     }, 100)
   }, [startTimer])
 
+  // Load saved data on mount
   useEffect(() => {
     if (typeof window === 'undefined') return
     
     const savedSessionStart = localStorage.getItem("sessionStartTime")
     if (savedSessionStart) {
-      setState((prev) => ({
+      setState(prev => ({
         ...prev,
         sessionStartTime: new Date(savedSessionStart),
       }))
@@ -169,20 +213,23 @@ export function useTimeoutReminder(config: TimeoutReminderConfig, onTimeout: () 
 
     const savedLastReminder = localStorage.getItem("lastTimeoutReminderTime")
     if (savedLastReminder) {
-      setState((prev) => ({
+      setState(prev => ({
         ...prev,
         lastReminderTime: new Date(savedLastReminder),
       }))
     }
   }, [])
 
+  // Update timer display every second
   useEffect(() => {
     const updateTimer = () => {
-      const now = new Date()
+      const now = moment()
       const withinHours = checkIsWithinActiveHours(configRef.current.activeHours)
 
-      setState((prev) => {
-        const timeUntilNextReminder = prev.nextReminderTime ? prev.nextReminderTime.getTime() - now.getTime() : null
+      setState(prev => {
+        const timeUntilNextReminder = prev.nextReminderTime 
+          ? moment(prev.nextReminderTime).diff(now)
+          : null
 
         return {
           ...prev,
@@ -193,23 +240,35 @@ export function useTimeoutReminder(config: TimeoutReminderConfig, onTimeout: () 
     }
 
     updateTimer()
-    checkIntervalRef.current = setInterval(updateTimer, 1000)
+    updateIntervalRef.current = setInterval(updateTimer, 1000)
 
     return () => {
-      if (checkIntervalRef.current) {
-        clearInterval(checkIntervalRef.current)
+      if (updateIntervalRef.current) {
+        clearInterval(updateIntervalRef.current)
       }
     }
-  }, [])
+  }, [checkIsWithinActiveHours])
 
+  // Auto-start/stop timer based on conditions
   useEffect(() => {
     const currentConfig = configRef.current
-    if (currentConfig.isEnabled && state.isWithinActiveHours && !state.isActive) {
+    const shouldBeActive = currentConfig.isEnabled && state.isWithinActiveHours
+    
+    console.log('[TimeoutReminder] Auto-start/stop check:', {
+      isEnabled: currentConfig.isEnabled,
+      isWithinActiveHours: state.isWithinActiveHours,
+      isActive: state.isActive,
+      shouldBeActive
+    })
+
+    if (shouldBeActive && !state.isActive && !state.isStarting) {
+      console.log('[TimeoutReminder] Auto-starting timer')
       startTimer()
-    } else if ((!currentConfig.isEnabled || !state.isWithinActiveHours) && state.isActive) {
+    } else if (!shouldBeActive && state.isActive) {
+      console.log('[TimeoutReminder] Auto-stopping timer')
       stopTimer()
     }
-  }, [config.isEnabled, state.isWithinActiveHours, state.isActive]) // Removed function dependencies
+  }, [config.isEnabled, state.isWithinActiveHours, state.isActive, state.isStarting, startTimer, stopTimer])
 
   // Cleanup on unmount
   useEffect(() => {
@@ -217,17 +276,18 @@ export function useTimeoutReminder(config: TimeoutReminderConfig, onTimeout: () 
       if (timerRef.current) {
         clearTimeout(timerRef.current)
       }
-      if (checkIntervalRef.current) {
-        clearInterval(checkIntervalRef.current)
+      if (updateIntervalRef.current) {
+        clearInterval(updateIntervalRef.current)
       }
     }
   }, [])
 
+  // Format time remaining
   const formatTimeRemaining = useCallback((ms: number): string => {
-    const totalSeconds = Math.floor(ms / 1000)
-    const hours = Math.floor(totalSeconds / 3600)
-    const minutes = Math.floor((totalSeconds % 3600) / 60)
-    const seconds = totalSeconds % 60
+    const duration = moment.duration(ms)
+    const hours = Math.floor(duration.asHours())
+    const minutes = duration.minutes()
+    const seconds = duration.seconds()
 
     if (hours > 0) {
       return `${hours}h ${minutes}m ${seconds}s`
