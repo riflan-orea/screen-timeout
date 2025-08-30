@@ -120,7 +120,7 @@ export function SettingsDialog({
               <CardDescription>Set when timeout reminders should be active</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="start-time">Start Time</Label>
                   <TimeInput
@@ -149,33 +149,33 @@ export function SettingsDialog({
               <CardDescription>How often you want to receive reminders</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex gap-2">
-                <Input
-                  type="number"
-                  min="1"
-                  max="480"
-                  value={localTimeoutInterval.value}
-                  onChange={(e) =>
-                    setLocalTimeoutInterval({
-                      ...localTimeoutInterval,
-                      value: Math.max(1, Math.min(480, Number.parseInt(e.target.value) || 1)),
-                    })
-                  }
-                  className="flex-1"
-                />
-                <Select
-                  value={localTimeoutInterval.unit}
-                  onValueChange={(value) => setLocalTimeoutInterval({ ...localTimeoutInterval, unit: value })}
-                >
-                  <SelectTrigger className="w-32">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="minutes">Minutes</SelectItem>
-                    <SelectItem value="hours">Hours</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                             <div className="flex gap-2">
+                 <Input
+                   type="number"
+                   min="1"
+                   max="480"
+                   value={localTimeoutInterval.value}
+                   onChange={(e) =>
+                     setLocalTimeoutInterval({
+                       ...localTimeoutInterval,
+                       value: Math.max(1, Math.min(480, Number.parseInt(e.target.value) || 1)),
+                     })
+                   }
+                   className="flex-1 border border-input"
+                 />
+                 <Select
+                   value={localTimeoutInterval.unit}
+                   onValueChange={(value) => setLocalTimeoutInterval({ ...localTimeoutInterval, unit: value })}
+                 >
+                   <SelectTrigger className="w-32 border border-input">
+                     <SelectValue />
+                   </SelectTrigger>
+                   <SelectContent>
+                     <SelectItem value="minutes">Minutes</SelectItem>
+                     <SelectItem value="hours">Hours</SelectItem>
+                   </SelectContent>
+                 </Select>
+               </div>
               {!isValidInterval() && (
                 <p className="text-sm text-destructive mt-2">
                   Interval must be between 1 and 480 {localTimeoutInterval.unit}
