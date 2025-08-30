@@ -68,7 +68,7 @@ export function useTimeoutReminder(config: TimeoutReminderConfig, onTimeout: () 
     const now = new Date()
     const intervalMs = getTimeoutIntervalMs(currentConfig.timeoutInterval)
 
-    const lastReminderStr = localStorage.getItem("lastTimeoutReminderTime")
+    const lastReminderStr = typeof window !== "undefined" ? localStorage.getItem("lastTimeoutReminderTime") : null
     const lastReminderTime = lastReminderStr ? new Date(lastReminderStr) : null
 
     let nextReminderTime: Date
@@ -82,7 +82,9 @@ export function useTimeoutReminder(config: TimeoutReminderConfig, onTimeout: () 
     const timeUntilReminder = nextReminderTime.getTime() - now.getTime()
     const sessionStart = new Date()
 
-    localStorage.setItem("sessionStartTime", sessionStart.toISOString())
+    if (typeof window !== "undefined") {
+      localStorage.setItem("sessionStartTime", sessionStart.toISOString())
+    }
 
     setState((prev) => ({
       ...prev,
@@ -99,7 +101,9 @@ export function useTimeoutReminder(config: TimeoutReminderConfig, onTimeout: () 
     timerRef.current = setTimeout(
       () => {
         const reminderTime = new Date()
-        localStorage.setItem("lastTimeoutReminderTime", reminderTime.toISOString())
+        if (typeof window !== "undefined") {
+          localStorage.setItem("lastTimeoutReminderTime", reminderTime.toISOString())
+        }
 
         setState((prev) => ({
           ...prev,
@@ -144,8 +148,10 @@ export function useTimeoutReminder(config: TimeoutReminderConfig, onTimeout: () 
       timeUntilNextReminder: null,
     }))
 
-    localStorage.removeItem("lastTimeoutReminderTime")
-    localStorage.setItem("sessionStartTime", newSessionStart.toISOString())
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("lastTimeoutReminderTime")
+      localStorage.setItem("sessionStartTime", newSessionStart.toISOString())
+    }
 
     setTimeout(() => {
       startTimer()
@@ -153,7 +159,7 @@ export function useTimeoutReminder(config: TimeoutReminderConfig, onTimeout: () 
   }, [startTimer])
 
   useEffect(() => {
-    const savedSessionStart = localStorage.getItem("sessionStartTime")
+    const savedSessionStart = typeof window !== "undefined" ? localStorage.getItem("sessionStartTime") : null
     if (savedSessionStart) {
       setState((prev) => ({
         ...prev,
@@ -161,7 +167,7 @@ export function useTimeoutReminder(config: TimeoutReminderConfig, onTimeout: () 
       }))
     }
 
-    const savedLastReminder = localStorage.getItem("lastTimeoutReminderTime")
+    const savedLastReminder = typeof window !== "undefined" ? localStorage.getItem("lastTimeoutReminderTime") : null
     if (savedLastReminder) {
       setState((prev) => ({
         ...prev,

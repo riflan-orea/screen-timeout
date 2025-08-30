@@ -28,6 +28,8 @@ export function useNotification() {
 
   // Initialize notification state
   useEffect(() => {
+    if (typeof window === "undefined") return
+    
     const isSupported = "Notification" in window
     const permission = isSupported ? Notification.permission : "denied"
 
@@ -43,7 +45,7 @@ export function useNotification() {
 
   // Request notification permission
   const requestPermission = useCallback(async (): Promise<boolean> => {
-    if (!state.isSupported) {
+    if (typeof window === "undefined" || !state.isSupported) {
       console.warn("Notifications are not supported in this browser")
       return false
     }
@@ -57,7 +59,9 @@ export function useNotification() {
       setState((prev) => ({ ...prev, permission }))
 
       // Store permission state
-      localStorage.setItem("notificationPermission", permission)
+      if (typeof localStorage !== "undefined") {
+        localStorage.setItem("notificationPermission", permission)
+      }
 
       return permission === "granted"
     } catch (error) {
@@ -68,6 +72,8 @@ export function useNotification() {
 
   // Play notification sound
   const playNotificationSound = useCallback(() => {
+    if (typeof window === "undefined") return
+    
     try {
       // Create audio context for notification sound
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
@@ -94,6 +100,8 @@ export function useNotification() {
 
   // Trigger device vibration
   const triggerVibration = useCallback(() => {
+    if (typeof window === "undefined" || typeof navigator === "undefined") return
+    
     if ("vibrate" in navigator) {
       try {
         // Vibration pattern: vibrate for 200ms, pause 100ms, vibrate 200ms
@@ -106,7 +114,7 @@ export function useNotification() {
 
   const showNotification = useCallback(
     async (options: NotificationOptions): Promise<boolean> => {
-      if (!state.isSupported || state.permission !== "granted") {
+      if (typeof window === "undefined" || !state.isSupported || state.permission !== "granted") {
         console.warn("Cannot show notification: not supported or permission denied")
         return false
       }
@@ -158,7 +166,9 @@ export function useNotification() {
 
         // Store notification time
         const now = Date.now()
-        localStorage.setItem("lastNotificationTime", now.toString())
+        if (typeof localStorage !== "undefined") {
+          localStorage.setItem("lastNotificationTime", now.toString())
+        }
         setState((prev) => ({ ...prev, lastNotificationTime: now }))
 
         return true

@@ -7,6 +7,8 @@ export function useServiceWorker() {
   const [isRegistered, setIsRegistered] = useState(false)
 
   useEffect(() => {
+    if (typeof window === "undefined" || typeof navigator === "undefined") return
+    
     if ("serviceWorker" in navigator) {
       setIsSupported(true)
 
@@ -23,6 +25,8 @@ export function useServiceWorker() {
   }, [])
 
   const scheduleNotification = (title: string, body: string, delay: number) => {
+    if (typeof window === "undefined" || typeof navigator === "undefined") return
+    
     if (isRegistered && navigator.serviceWorker.controller) {
       navigator.serviceWorker.controller.postMessage({
         type: "SCHEDULE_NOTIFICATION",
