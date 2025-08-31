@@ -25,12 +25,18 @@ export function PWAInstallButton() {
     const checkInstallStatus = () => {
       const standalone = window.matchMedia('(display-mode: standalone)').matches
       const inApp = (window.navigator as any).standalone === true
-      const installed = standalone || inApp
+      const fullscreen = window.matchMedia('(display-mode: fullscreen)').matches
+      const minimalUI = window.matchMedia('(display-mode: minimal-ui)').matches
+      const installed = standalone || inApp || fullscreen || minimalUI
       
       setIsInstalled(installed)
     }
 
     checkInstallStatus()
+    
+    // Listen for display mode changes
+    const mediaQuery = window.matchMedia('(display-mode: standalone)')
+    mediaQuery.addEventListener('change', checkInstallStatus)
 
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault()
@@ -50,6 +56,8 @@ export function PWAInstallButton() {
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
       window.removeEventListener('appinstalled', handleAppInstalled)
+      const mediaQuery = window.matchMedia('(display-mode: standalone)')
+      mediaQuery.removeEventListener('change', checkInstallStatus)
     }
   }, [])
 
