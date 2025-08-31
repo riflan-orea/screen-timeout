@@ -15,6 +15,7 @@ interface NotificationState {
   permission: NotificationPermission
   isSupported: boolean
   lastNotificationTime: number | null
+  isAndroid: boolean
 }
 
 export function useNotification() {
@@ -22,6 +23,7 @@ export function useNotification() {
     permission: "default",
     isSupported: false,
     lastNotificationTime: null,
+    isAndroid: false,
   })
 
   const { isSupported: swSupported, isRegistered: swRegistered, scheduleNotification, cancelNotification, showNotificationViaServiceWorker } = useServiceWorker()
@@ -31,6 +33,7 @@ export function useNotification() {
     if (typeof window === 'undefined') return
     
     const isSupported = "Notification" in window
+    const isAndroid = /Android/i.test(navigator.userAgent)
     
     // Check saved permission first, then current permission
     const savedPermission = localStorage.getItem("notificationPermission") as NotificationPermission
@@ -46,12 +49,21 @@ export function useNotification() {
       permission,
       isSupported,
       lastNotificationTime: lastNotificationTime ? Number.parseInt(lastNotificationTime) : null,
+      isAndroid,
     })
 
     // Update localStorage if permission has changed
     if (permission !== savedPermission) {
       localStorage.setItem("notificationPermission", permission)
     }
+
+    console.log("[Notification] Initialized with:", {
+      isSupported,
+      permission,
+      isAndroid,
+      swSupported,
+      swRegistered: false // Will be updated by service worker hook
+    })
   }, [])
 
   // Request notification permission
@@ -68,6 +80,12 @@ export function useNotification() {
 
     try {
       console.log("[Notification] Requesting permission...")
+      
+      // For Android, we might need to handle this differently
+      if (state.isAndroid) {
+        console.log("[Notification] Android device detected, using special handling")
+      }
+      
       const permission = await Notification.requestPermission()
       console.log("[Notification] Permission result:", permission)
       
@@ -83,7 +101,7 @@ export function useNotification() {
       console.error("[Notification] Error requesting notification permission:", error)
       return false
     }
-  }, [state.isSupported, state.permission])
+  }, [state.isSupported, state.permission, state.isAndroid])
 
   // Play notification sound
   const playNotificationSound = useCallback(() => {
@@ -130,6 +148,7 @@ export function useNotification() {
       console.log("[Notification] Attempting to show notification:", {
         isSupported: state.isSupported,
         permission: state.permission,
+        isAndroid: state.isAndroid,
         swSupported,
         swRegistered,
         options
@@ -144,40 +163,35 @@ export function useNotification() {
       }
 
       try {
+        // For Android, prefer service worker notifications
         if (swSupported && swRegistered && navigator.serviceWorker.controller) {
-          console.log("[Notification] Using service worker notification")
+          console.log("[Notification] Using service worker notification (preferred for Android)")
           // Use service worker for better background support
           showNotificationViaServiceWorker(options.title, options.body)
-        } else {
-          console.log("[Notification] Using direct notification API", {
-            swSupported,
-            swRegistered,
-            hasController: !!navigator.serviceWorker?.controller
-          })
-          // Fallback to regular notification
-          const notification = new Notification(options.title, {
-            body: options.body,
-            icon: options.icon || "/favicon.ico",
-            tag: options.tag || "timeout-reminder",
-            requireInteraction: options.requireInteraction || true,
-            silent: false,
-          })
-
-          notification.onclick = () => {
-            console.log("[Notification] Notification clicked")
-            if (typeof window !== 'undefined') {
-              window.focus()
+        } else if (swSupported && swRegistered) {
+          console.log("[Notification] Service worker registered but no controller, waiting...")
+          // Wait for controller to be ready
+          try {
+            const registration = await navigator.serviceWorker.ready
+            if (registration.active) {
+              registration.active.postMessage({
+                type: "SHOW_NOTIFICATION",
+                title: options.title,
+                body: options.body,
+              })
+              console.log("[Notification] Notification sent via active service worker")
+            } else {
+              throw new Error("No active service worker")
             }
-            notification.close()
+          } catch (error) {
+            console.warn("[Notification] Service worker not ready, falling back to direct notification:", error)
+            // Fallback to direct notification
+            await showDirectNotification(options)
           }
-
-          notification.onerror = (error) => {
-            console.error("[Notification] Notification error:", error)
-          }
-
-          setTimeout(() => {
-            notification.close()
-          }, 10000)
+        } else {
+          console.log("[Notification] Using direct notification API (fallback)")
+          // Fallback to regular notification
+          await showDirectNotification(options)
         }
 
         // Play sound and trigger vibration
@@ -198,8 +212,48 @@ export function useNotification() {
         return false
       }
     },
-    [state.isSupported, state.permission, playNotificationSound, triggerVibration, swSupported, swRegistered, showNotificationViaServiceWorker],
+    [state.isSupported, state.permission, state.isAndroid, playNotificationSound, triggerVibration, swSupported, swRegistered, showNotificationViaServiceWorker],
   )
+
+  // Helper function for direct notifications
+  const showDirectNotification = async (options: NotificationOptions): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      try {
+        const notification = new Notification(options.title, {
+          body: options.body,
+          icon: options.icon || (state.isAndroid ? "/icon-192.png" : "/favicon.ico"),
+          tag: options.tag || "timeout-reminder",
+          requireInteraction: options.requireInteraction || true,
+          silent: false,
+          vibrate: state.isAndroid ? [200, 100, 200] : undefined,
+        })
+
+        notification.onclick = () => {
+          console.log("[Notification] Notification clicked")
+          if (typeof window !== 'undefined') {
+            window.focus()
+          }
+          notification.close()
+        }
+
+        notification.onerror = (error) => {
+          console.error("[Notification] Notification error:", error)
+          reject(error)
+        }
+
+        notification.onshow = () => {
+          console.log("[Notification] Direct notification shown")
+          resolve()
+        }
+
+        setTimeout(() => {
+          notification.close()
+        }, 10000)
+      } catch (error) {
+        reject(error)
+      }
+    })
+  }
 
   const scheduleTimeoutReminder = useCallback(
     (delayMs: number, message?: string, id?: string): boolean => {
@@ -247,6 +301,7 @@ export function useNotification() {
     isEnabled,
     hasBackgroundSupport, // Added background support indicator
     lastNotificationTime: state.lastNotificationTime,
+    isAndroid: state.isAndroid,
     requestPermission,
     showNotification,
     showTimeoutReminder,

@@ -1,6 +1,6 @@
-const CACHE_NAME = "timeout-reminder-v2"
-const STATIC_CACHE_NAME = "timeout-reminder-static-v2"
-const DYNAMIC_CACHE_NAME = "timeout-reminder-dynamic-v2"
+const CACHE_NAME = "timeout-reminder-v4"
+const STATIC_CACHE_NAME = "timeout-reminder-static-v4"
+const DYNAMIC_CACHE_NAME = "timeout-reminder-dynamic-v4"
 
 // Assets to cache on install
 const STATIC_ASSETS = [
@@ -22,7 +22,10 @@ self.addEventListener("install", (event) => {
         console.log("[SW] Caching static assets")
         return cache.addAll(STATIC_ASSETS)
       })
-      .then(() => self.skipWaiting())
+      .then(() => {
+        console.log("[SW] Skip waiting to activate immediately")
+        return self.skipWaiting()
+      })
   )
 })
 
@@ -41,9 +44,13 @@ self.addEventListener("activate", (event) => {
           })
         )
       }),
-      // Take control of all clients
+      // Take control of all clients immediately
       self.clients.claim()
-    ])
+    ]).then(() => {
+      console.log("[SW] Service worker activated and claimed clients")
+      // Start background notification checker
+      startBackgroundNotificationChecker()
+    })
   )
 })
 
@@ -94,6 +101,155 @@ self.addEventListener("fetch", (event) => {
 
 // Store scheduled notifications
 let scheduledNotifications = new Map()
+let backgroundNotificationChecker = null
+
+// Start background notification checker
+function startBackgroundNotificationChecker() {
+  if (backgroundNotificationChecker) {
+    clearInterval(backgroundNotificationChecker)
+  }
+  
+  // Check for notifications every 30 seconds
+  backgroundNotificationChecker = setInterval(() => {
+    checkAndShowScheduledNotifications()
+  }, 30000)
+  
+  console.log("[SW] Background notification checker started")
+}
+
+// Check and show scheduled notifications
+async function checkAndShowScheduledNotifications() {
+  try {
+    // Get scheduled notification data from IndexedDB or localStorage
+    const notificationData = await getScheduledNotificationData()
+    
+    if (notificationData && notificationData.scheduledTime) {
+      const now = Date.now()
+      const timeUntilNotification = notificationData.scheduledTime - now
+      
+      // If it's time to show the notification (within 30 seconds)
+      if (timeUntilNotification <= 30000 && timeUntilNotification > -30000) {
+        console.log("[SW] Time to show background notification:", notificationData)
+        
+        // Show the notification
+        await showNotificationWithOptions(notificationData.title, notificationData.body)
+        
+        // Schedule next notification if it's a recurring one
+        if (notificationData.interval) {
+          const nextNotificationData = {
+            ...notificationData,
+            scheduledTime: now + notificationData.interval,
+            id: `timeout-reminder-${Date.now()}`
+          }
+          
+          await storeScheduledNotificationData(nextNotificationData)
+          console.log("[SW] Next notification scheduled for:", new Date(nextNotificationData.scheduledTime))
+        } else {
+          // Clear the notification data if it's not recurring
+          await clearScheduledNotificationData()
+        }
+      }
+    }
+  } catch (error) {
+    console.error("[SW] Error checking scheduled notifications:", error)
+  }
+}
+
+// Store notification data (using IndexedDB for better persistence)
+async function storeScheduledNotificationData(data) {
+  try {
+    // For now, use a simple approach with a custom storage key
+    // In a production app, you might want to use IndexedDB
+    const storageKey = 'timeout-reminder-scheduled-notification'
+    const storageData = {
+      ...data,
+      storedAt: Date.now()
+    }
+    
+    // Store in a way that persists across service worker restarts
+    await self.registration.storage.set(storageKey, storageData)
+    console.log("[SW] Notification data stored:", storageData)
+  } catch (error) {
+    console.error("[SW] Error storing notification data:", error)
+  }
+}
+
+// Get stored notification data
+async function getScheduledNotificationData() {
+  try {
+    const storageKey = 'timeout-reminder-scheduled-notification'
+    const data = await self.registration.storage.get(storageKey)
+    return data || null
+  } catch (error) {
+    console.error("[SW] Error getting notification data:", error)
+    return null
+  }
+}
+
+// Clear stored notification data
+async function clearScheduledNotificationData() {
+  try {
+    const storageKey = 'timeout-reminder-scheduled-notification'
+    await self.registration.storage.delete(storageKey)
+    console.log("[SW] Notification data cleared")
+  } catch (error) {
+    console.error("[SW] Error clearing notification data:", error)
+  }
+}
+
+// Helper function to show notification with Android-specific options
+const showNotificationWithOptions = async (title, body, options = {}) => {
+  try {
+    // Check if we have permission
+    if (Notification.permission !== 'granted') {
+      console.error("[SW] Notification permission not granted")
+      return false
+    }
+
+    // Android-specific notification options
+    const notificationOptions = {
+      body,
+      icon: "/icon-192.png", // Use PNG for better Android support
+      badge: "/icon-192.png",
+      tag: "timeout-reminder",
+      requireInteraction: true,
+      silent: false,
+      vibrate: [200, 100, 200], // Vibration pattern for Android
+      actions: [
+        {
+          action: "dismiss",
+          title: "Dismiss",
+        },
+        {
+          action: "snooze",
+          title: "Snooze 5 min",
+        },
+      ],
+      // Android-specific options
+      android: {
+        icon: "/icon-192.png",
+        color: "#000000",
+        priority: "high",
+        sticky: true,
+        channelId: "timeout-reminders",
+      },
+      data: {
+        url: "/", // URL to open when notification is clicked
+        timestamp: Date.now()
+      },
+      ...options
+    }
+
+    console.log("[SW] Showing notification with options:", notificationOptions)
+    
+    const notification = await self.registration.showNotification(title, notificationOptions)
+    console.log("[SW] Notification shown successfully:", notification)
+    return true
+  } catch (error) {
+    console.error("[SW] Error showing notification:", error)
+    return false
+  }
+}
 
 self.addEventListener("message", (event) => {
   console.log("[SW] Received message:", event.data)
@@ -108,25 +264,9 @@ self.addEventListener("message", (event) => {
       console.log("[SW] Cleared existing notification:", id)
     }
     
-    const timeoutId = setTimeout(() => {
+    const timeoutId = setTimeout(async () => {
       console.log("[SW] Showing scheduled notification:", { title, body })
-      self.registration.showNotification(title, {
-        body,
-        icon: "/favicon.ico",
-        badge: "/favicon.ico",
-        tag: "timeout-reminder",
-        requireInteraction: true,
-        actions: [
-          {
-            action: "dismiss",
-            title: "Dismiss",
-          },
-        ],
-      }).then(() => {
-        console.log("[SW] Notification shown successfully")
-      }).catch(error => {
-        console.error("[SW] Error showing notification:", error)
-      })
+      await showNotificationWithOptions(title, body)
       
       // Clean up
       if (id) {
@@ -141,6 +281,20 @@ self.addEventListener("message", (event) => {
     }
   }
   
+  if (event.data && event.data.type === "SCHEDULE_BACKGROUND_NOTIFICATION") {
+    const { title, body, scheduledTime, interval, id } = event.data
+    console.log("[SW] Scheduling background notification:", { title, body, scheduledTime, interval, id })
+    
+    // Store the notification data for background processing
+    storeScheduledNotificationData({
+      title,
+      body,
+      scheduledTime,
+      interval,
+      id
+    })
+  }
+  
   if (event.data && event.data.type === "CANCEL_NOTIFICATION") {
     const { id } = event.data
     console.log("[SW] Canceling notification:", id)
@@ -151,43 +305,107 @@ self.addEventListener("message", (event) => {
     }
   }
   
+  if (event.data && event.data.type === "CANCEL_ALL_NOTIFICATIONS") {
+    console.log("[SW] Canceling all notifications")
+    
+    // Clear all scheduled timeouts
+    scheduledNotifications.forEach(timeoutId => {
+      clearTimeout(timeoutId)
+    })
+    scheduledNotifications.clear()
+    
+    // Clear stored notification data
+    clearScheduledNotificationData()
+    
+    console.log("[SW] All notifications canceled")
+  }
+  
   if (event.data && event.data.type === "SHOW_NOTIFICATION") {
     const { title, body } = event.data
     console.log("[SW] Showing immediate notification:", { title, body })
-    self.registration.showNotification(title, {
-      body,
-      icon: "/favicon.ico",
-      badge: "/favicon.ico",
-      tag: "timeout-reminder",
-      requireInteraction: true,
-      actions: [
-        {
-          action: "dismiss",
-          title: "Dismiss",
-        },
-      ],
-    }).then(() => {
-      console.log("[SW] Immediate notification shown successfully")
-    }).catch(error => {
-      console.error("[SW] Error showing immediate notification:", error)
-    })
+    showNotificationWithOptions(title, body)
   }
 })
 
 self.addEventListener("notificationclick", (event) => {
+  console.log("[SW] Notification clicked:", event)
   event.notification.close()
 
   if (event.action === "dismiss") {
+    console.log("[SW] Notification dismissed")
+    return
+  }
+  
+  if (event.action === "snooze") {
+    console.log("[SW] Notification snoozed")
+    // Snooze for 5 minutes
+    const snoozeData = {
+      title: event.notification.title,
+      body: event.notification.body,
+      scheduledTime: Date.now() + (5 * 60 * 1000), // 5 minutes
+      id: `snooze-${Date.now()}`
+    }
+    storeScheduledNotificationData(snoozeData)
     return
   }
 
   // Focus or open the app
   event.waitUntil(
     self.clients.matchAll({ type: "window" }).then((clients) => {
+      console.log("[SW] Found clients:", clients.length)
       if (clients.length > 0) {
+        console.log("[SW] Focusing existing client")
         return clients[0].focus()
       }
+      console.log("[SW] Opening new window")
       return self.clients.openWindow("/")
+    }).catch(error => {
+      console.error("[SW] Error handling notification click:", error)
     }),
   )
+})
+
+// Handle notification close
+self.addEventListener("notificationclose", (event) => {
+  console.log("[SW] Notification closed:", event)
+})
+
+// Handle push events (for future use)
+self.addEventListener("push", (event) => {
+  console.log("[SW] Push event received:", event)
+  
+  if (event.data) {
+    try {
+      const data = event.data.json()
+      console.log("[SW] Push data:", data)
+      
+      if (data.title && data.body) {
+        showNotificationWithOptions(data.title, data.body, data.options)
+      }
+    } catch (error) {
+      console.error("[SW] Error parsing push data:", error)
+    }
+  }
+})
+
+// Handle background sync (for better reliability)
+self.addEventListener("sync", (event) => {
+  console.log("[SW] Background sync event:", event.tag)
+  
+  if (event.tag === "timeout-reminder-sync") {
+    event.waitUntil(
+      checkAndShowScheduledNotifications()
+    )
+  }
+})
+
+// Handle periodic background sync (for better reliability on supported browsers)
+self.addEventListener("periodicsync", (event) => {
+  console.log("[SW] Periodic background sync event:", event.tag)
+  
+  if (event.tag === "timeout-reminder-periodic") {
+    event.waitUntil(
+      checkAndShowScheduledNotifications()
+    )
+  }
 })

@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Background Notification Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .warning { background: #fff3cd; color: #856404; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        .instructions {
+            background: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Background Notification Test</h1>
+    
+    <div class="instructions">
+        <h3>How to Test Background Notifications:</h3>
+        <ol>
+            <li>Click "Schedule Test Notification" below</li>
+            <li>Close this tab/browser completely</li>
+            <li>Wait for the notification to appear (should show even with app closed)</li>
+            <li>If using Android, make sure the app is installed as PWA for best results</li>
+        </ol>
+    </div>
+    
+    <div class="test-section">
+        <h2>Background Notification Test</h2>
+        <button onclick="scheduleBackgroundNotification()">Schedule Test Notification (30 seconds)</button>
+        <button onclick="scheduleBackgroundNotification(60)">Schedule Test Notification (1 minute)</button>
+        <button onclick="scheduleBackgroundNotification(300)">Schedule Test Notification (5 minutes)</button>
+        <button onclick="cancelAllNotifications()">Cancel All Notifications</button>
+        <div id="background-status"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Service Worker Status</h2>
+        <button onclick="checkServiceWorkerStatus()">Check Service Worker</button>
+        <div id="sw-status"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Background Sync Test</h2>
+        <button onclick="testBackgroundSync()">Test Background Sync</button>
+        <div id="sync-status"></div>
+    </div>
+
+    <script>
+        function log(message, type = 'info', targetId = 'background-status') {
+            console.log(`[${type.toUpperCase()}] ${message}`);
+            const statusDiv = document.getElementById(targetId);
+            if (statusDiv) {
+                statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+            }
+        }
+
+        async function scheduleBackgroundNotification(delaySeconds = 30) {
+            if (!('serviceWorker' in navigator)) {
+                log('Service Worker not supported', 'error');
+                return;
+            }
+            
+            try {
+                const registration = await navigator.serviceWorker.ready;
+                if (registration.active) {
+                    const notificationData = {
+                        type: 'SCHEDULE_BACKGROUND_NOTIFICATION',
+                        title: 'Background Test Notification',
+                        body: `This notification was scheduled ${delaySeconds} seconds ago and should appear even with the app closed!`,
+                        scheduledTime: Date.now() + (delaySeconds * 1000),
+                        interval: null, // One-time notification
+                        id: `test-${Date.now()}`
+                    };
+                    
+                    registration.active.postMessage(notificationData);
+                    log(`Background notification scheduled for ${delaySeconds} seconds from now. Close this tab and wait for the notification.`, 'success');
+                } else {
+                    log('No active Service Worker', 'error');
+                }
+            } catch (error) {
+                log(`Error scheduling background notification: ${error.message}`, 'error');
+            }
+        }
+
+        async function cancelAllNotifications() {
+            if (!('serviceWorker' in navigator)) {
+                log('Service Worker not supported', 'error');
+                return;
+            }
+            
+            try {
+                const registration = await navigator.serviceWorker.ready;
+                if (registration.active) {
+                    registration.active.postMessage({
+                        type: 'CANCEL_ALL_NOTIFICATIONS'
+                    });
+                    log('All notifications cancelled', 'success');
+                } else {
+                    log('No active Service Worker', 'error');
+                }
+            } catch (error) {
+                log(`Error cancelling notifications: ${error.message}`, 'error');
+            }
+        }
+
+        async function checkServiceWorkerStatus() {
+            if (!('serviceWorker' in navigator)) {
+                log('Service Worker not supported', 'error', 'sw-status');
+                return;
+            }
+            
+            try {
+                const registration = await navigator.serviceWorker.getRegistration();
+                if (registration) {
+                    const status = {
+                        registered: true,
+                        active: !!registration.active,
+                        installing: !!registration.installing,
+                        waiting: !!registration.waiting,
+                        scope: registration.scope
+                    };
+                    
+                    log(`Service Worker Status: ${JSON.stringify(status, null, 2)}`, 'success', 'sw-status');
+                } else {
+                    log('No Service Worker registered', 'warning', 'sw-status');
+                }
+            } catch (error) {
+                log(`Error checking Service Worker: ${error.message}`, 'error', 'sw-status');
+            }
+        }
+
+        async function testBackgroundSync() {
+            if (!('serviceWorker' in navigator)) {
+                log('Service Worker not supported', 'error', 'sync-status');
+                return;
+            }
+            
+            try {
+                const registration = await navigator.serviceWorker.ready;
+                
+                // Test background sync
+                if ('sync' in registration) {
+                    await (registration as any).sync.register('timeout-reminder-sync');
+                    log('Background sync registered successfully', 'success', 'sync-status');
+                } else {
+                    log('Background sync not supported', 'warning', 'sync-status');
+                }
+                
+                // Test periodic background sync
+                if ('periodicSync' in registration) {
+                    try {
+                        const status = await navigator.permissions.query({
+                            name: 'periodic-background-sync' as any
+                        });
+                        
+                        if (status.state === 'granted') {
+                            await (registration as any).periodicSync.register('timeout-reminder-periodic', {
+                                minInterval: 30000
+                            });
+                            log('Periodic background sync registered successfully', 'success', 'sync-status');
+                        } else {
+                            log('Periodic background sync permission not granted', 'warning', 'sync-status');
+                        }
+                    } catch (error) {
+                        log(`Periodic background sync error: ${error.message}`, 'warning', 'sync-status');
+                    }
+                } else {
+                    log('Periodic background sync not supported', 'warning', 'sync-status');
+                }
+            } catch (error) {
+                log(`Error testing background sync: ${error.message}`, 'error', 'sync-status');
+            }
+        }
+
+        // Initialize
+        checkServiceWorkerStatus();
+        
+        // Listen for service worker messages
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.addEventListener('message', event => {
+                log(`Service Worker message: ${JSON.stringify(event.data)}`, 'info');
+            });
+        }
+    </script>
+</body>
+</html>

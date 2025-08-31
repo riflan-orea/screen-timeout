@@ -62,6 +62,66 @@ export function useTimeoutReminder(config: TimeoutReminderConfig, onTimeout: () 
     return moment.duration(value, unit as moment.DurationInputArg2).asMilliseconds()
   }, [])
 
+  // Schedule notification through service worker
+  const scheduleNotification = useCallback((delayMs: number, message: string) => {
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return
+
+    try {
+      // Generate unique ID for this notification
+      const notificationId = `timeout-reminder-${Date.now()}`
+      
+      // Store notification info in localStorage for service worker to access
+      const notificationData = {
+        id: notificationId,
+        title: "Timeout Reminder",
+        body: message,
+        scheduledTime: Date.now() + delayMs,
+        interval: delayMs
+      }
+      
+      localStorage.setItem('scheduledNotification', JSON.stringify(notificationData))
+      
+      // Send message to service worker to schedule notification
+      navigator.serviceWorker.ready.then(registration => {
+        if (registration.active) {
+          registration.active.postMessage({
+            type: 'SCHEDULE_BACKGROUND_NOTIFICATION',
+            ...notificationData
+          })
+          console.log('[TimeoutReminder] Background notification scheduled:', notificationData)
+        }
+      }).catch(error => {
+        console.error('[TimeoutReminder] Error scheduling background notification:', error)
+      })
+    } catch (error) {
+      console.error('[TimeoutReminder] Error scheduling notification:', error)
+    }
+  }, [])
+
+  // Cancel scheduled notifications
+  const cancelScheduledNotifications = useCallback(() => {
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return
+
+    try {
+      // Clear stored notification data
+      localStorage.removeItem('scheduledNotification')
+      
+      // Send message to service worker to cancel notifications
+      navigator.serviceWorker.ready.then(registration => {
+        if (registration.active) {
+          registration.active.postMessage({
+            type: 'CANCEL_ALL_NOTIFICATIONS'
+          })
+          console.log('[TimeoutReminder] All background notifications cancelled')
+        }
+      }).catch(error => {
+        console.error('[TimeoutReminder] Error cancelling notifications:', error)
+      })
+    } catch (error) {
+      console.error('[TimeoutReminder] Error cancelling notifications:', error)
+    }
+  }, [])
+
   // Start the timer
   const startTimer = useCallback(async () => {
     if (typeof window === 'undefined') return
@@ -82,11 +142,12 @@ export function useTimeoutReminder(config: TimeoutReminderConfig, onTimeout: () 
       return
     }
 
-    // Clear any existing timer
+    // Clear any existing timer and scheduled notifications
     if (timerRef.current) {
       clearTimeout(timerRef.current)
       timerRef.current = null
     }
+    cancelScheduledNotifications()
 
     const now = moment()
     const intervalMs = getTimeoutIntervalMs(currentConfig.timeoutInterval)
@@ -112,6 +173,10 @@ export function useTimeoutReminder(config: TimeoutReminderConfig, onTimeout: () 
     // Clear stop date from localStorage when starting
     localStorage.removeItem("timerStopDate")
 
+    // Schedule background notification
+    const message = `⏰ Time for a break! You've been working for ${currentConfig.timeoutInterval.value} ${currentConfig.timeoutInterval.unit}${currentConfig.timeoutInterval.value > 1 ? 's' : ''}.`
+    scheduleNotification(Math.max(timeUntilReminder, 0), message)
+
     // Update state
     setState(prev => ({
       ...prev,
@@ -124,7 +189,7 @@ export function useTimeoutReminder(config: TimeoutReminderConfig, onTimeout: () 
       sessionStartTime: prev.sessionStartTime || sessionStart,
     }))
 
-    // Set the timeout
+    // Set the timeout for immediate feedback (when app is open)
     timerRef.current = setTimeout(async () => {
       const reminderTime = moment()
       localStorage.setItem("lastTimeoutReminderTime", reminderTime.toISOString())
@@ -143,7 +208,7 @@ export function useTimeoutReminder(config: TimeoutReminderConfig, onTimeout: () 
       // Restart timer for next interval
       startTimer()
     }, Math.max(timeUntilReminder, 0))
-  }, [checkIsWithinActiveHours, getTimeoutIntervalMs])
+  }, [checkIsWithinActiveHours, getTimeoutIntervalMs, scheduleNotification, cancelScheduledNotifications])
 
   // Check if it's a new day since the timer was stopped
   const isNewDaySinceStop = useCallback((stopDate: string): boolean => {
@@ -161,6 +226,9 @@ export function useTimeoutReminder(config: TimeoutReminderConfig, onTimeout: () 
       timerRef.current = null
     }
 
+    // Cancel scheduled notifications
+    cancelScheduledNotifications()
+
     const today = moment().format('YYYY-MM-DD')
     localStorage.setItem("timerStopDate", today)
 
@@ -173,7 +241,7 @@ export function useTimeoutReminder(config: TimeoutReminderConfig, onTimeout: () 
       nextReminderTime: null,
       timeUntilNextReminder: null,
     }))
-  }, [])
+  }, [cancelScheduledNotifications])
 
   // Reset the timer
   const resetTimer = useCallback(() => {
@@ -183,6 +251,9 @@ export function useTimeoutReminder(config: TimeoutReminderConfig, onTimeout: () 
       clearTimeout(timerRef.current)
       timerRef.current = null
     }
+
+    // Cancel scheduled notifications
+    cancelScheduledNotifications()
 
     const newSessionStart = new Date()
     localStorage.removeItem("lastTimeoutReminderTime")
@@ -205,7 +276,7 @@ export function useTimeoutReminder(config: TimeoutReminderConfig, onTimeout: () 
     setTimeout(() => {
       startTimer()
     }, 100)
-  }, [startTimer])
+  }, [startTimer, cancelScheduledNotifications])
 
   // Load saved data on mount
   useEffect(() => {

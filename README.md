@@ -1,14 +1,37 @@
-# Next.js notification app
+# Timeout Reminder App
 
-*Automatically synced with your [v0.app](https://v0.app) deployments*
+A Progressive Web App (PWA) that helps you stay productive with smart timeout reminders and background notifications.
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/riflan-ahameds-projects/v0-next-js-notification-app)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.app-black?style=for-the-badge)](https://v0.app/chat/projects/WDPpgnfBv02)
+## Features
 
-## Overview
+- ⏰ **Smart Timeout Reminders**: Set custom intervals for productivity breaks
+- 🔔 **Background Notifications**: Receive reminders even when the app is closed
+- 📱 **PWA Support**: Install as a native app on mobile devices
+- 🌙 **Dark/Light Theme**: Automatic theme switching
+- ⚙️ **Customizable Settings**: Adjust active hours and timeout intervals
+- 📊 **Progress Tracking**: Visual progress indicators for your work sessions
+- 🔄 **Recurring Notifications**: Automatic scheduling of next reminders
+- ⏸️ **Snooze Function**: 5-minute snooze option in notifications
 
-This repository will stay in sync with your deployed chats on [v0.app](https://v0.app).
-Any changes you make to your deployed app will be automatically pushed to this repository from [v0.app](https://v0.app).
+## Pages
+
+- **Home (`/`)**: Main application with timer controls and status
+- **Test (`/test`)**: Debug and testing page (development only)
+- **Test Notifications (`/test-notifications.html`)**: Basic notification testing
+- **Background Tests (`/test-background-notifications.html`)**: Background notification testing
+
+## Installation
+
+1. Clone the repository
+2. Install dependencies: `npm install`
+3. Run development server: `npm run dev`
+4. Open [http://localhost:3000](http://localhost:3000)
+
+## PWA Installation
+
+- **Desktop**: Click the install button in the header
+- **Mobile**: Use "Add to Home Screen" from browser menu
+- **Android**: Install as PWA for best background notification support
 
 ## Deployment
 
