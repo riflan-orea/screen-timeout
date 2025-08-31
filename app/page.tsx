@@ -232,7 +232,7 @@ export default function TimeoutReminderApp() {
                 {!timeoutReminder.isActive ? (
                   <Button
                     onClick={timeoutReminder.startTimer}
-                    disabled={timeoutReminder.isStarting || !notification.isEnabled}
+                    disabled={timeoutReminder.isStarting || !notification.isEnabled || !timeoutReminder.isWithinActiveHours}
                     className="flex items-center gap-2"
                   >
                     <Play className="h-4 w-4" />
@@ -254,6 +254,11 @@ export default function TimeoutReminderApp() {
                   Note: Enable notifications in settings to receive automatic timeout reminders
                 </p>
               )}
+              {notification.isEnabled && !timeoutReminder.isWithinActiveHours && (
+                <p className="text-xs text-muted-foreground mt-3">
+                  Timer is disabled outside of active hours ({formatActiveHours()})
+                </p>
+              )}
               {notification.isEnabled && notification.hasBackgroundSupport && (
                 <p className="text-xs text-success mt-3">
                   ✓ Background notifications enabled - you'll receive reminders even when the app is closed
@@ -269,11 +274,7 @@ export default function TimeoutReminderApp() {
                   ✓ Timer is active and running
                 </p>
               )}
-              {!timeoutReminder.isWithinActiveHours && notification.isEnabled && (
-                <p className="text-xs text-orange-600 mt-3">
-                  ⏰ Timer will start automatically when within active hours
-                </p>
-              )}
+
             </CardContent>
           </Card>
 
