@@ -27,8 +27,10 @@ export function PWAStatus() {
     // Check if app is already installed
     const checkInstallStatus = () => {
       const standalone = window.matchMedia('(display-mode: standalone)').matches
-      const inApp = window.navigator.standalone === true
-      const installed = standalone || inApp
+      const inApp = (window.navigator as any).standalone === true
+      const fullscreen = window.matchMedia('(display-mode: fullscreen)').matches
+      const minimalUI = window.matchMedia('(display-mode: minimal-ui)').matches
+      const installed = standalone || inApp || fullscreen || minimalUI
       
       setIsInstalled(installed)
       setIsStandalone(standalone)

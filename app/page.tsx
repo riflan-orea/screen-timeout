@@ -11,6 +11,7 @@ import { ThemeToggle } from "@/components/theme-toggle"
 import { SettingsDialog } from "@/components/settings-dialog"
 import { PWAStatus } from "@/components/pwa-status"
 import { PWAInstallButton } from "@/components/pwa-install-button"
+import { PWAInstallHandler } from "@/components/pwa-install-handler"
 import { useNotification } from "@/hooks/use-notification"
 import { useLocalStorage } from "@/hooks/use-local-storage"
 import { useTimeoutReminder } from "@/hooks/use-timeout-reminder"
@@ -324,7 +325,10 @@ export default function TimeoutReminderApp() {
         </div>
       </main>
 
-             {/* PWA Install Prompt - Hidden */}
+      {/* PWA Install Handler */}
+      <div className="fixed bottom-4 left-4 right-4 z-50">
+        <PWAInstallHandler />
+      </div>
     </div>
   )
 }
