@@ -92,11 +92,24 @@ self.addEventListener("fetch", (event) => {
   )
 })
 
-self.addEventListener("message", (event) => {
-  if (event.data && event.data.type === "SCHEDULE_NOTIFICATION") {
-    const { title, body, delay } = event.data
+// Store scheduled notifications
+let scheduledNotifications = new Map()
 
-    setTimeout(() => {
+self.addEventListener("message", (event) => {
+  console.log("[SW] Received message:", event.data)
+  
+  if (event.data && event.data.type === "SCHEDULE_NOTIFICATION") {
+    const { title, body, delay, id } = event.data
+    console.log("[SW] Scheduling notification:", { title, body, delay, id })
+    
+    // Clear existing notification with same id
+    if (id && scheduledNotifications.has(id)) {
+      clearTimeout(scheduledNotifications.get(id))
+      console.log("[SW] Cleared existing notification:", id)
+    }
+    
+    const timeoutId = setTimeout(() => {
+      console.log("[SW] Showing scheduled notification:", { title, body })
       self.registration.showNotification(title, {
         body,
         icon: "/favicon.ico",
@@ -109,8 +122,55 @@ self.addEventListener("message", (event) => {
             title: "Dismiss",
           },
         ],
+      }).then(() => {
+        console.log("[SW] Notification shown successfully")
+      }).catch(error => {
+        console.error("[SW] Error showing notification:", error)
       })
+      
+      // Clean up
+      if (id) {
+        scheduledNotifications.delete(id)
+      }
     }, delay)
+    
+    // Store the timeout id
+    if (id) {
+      scheduledNotifications.set(id, timeoutId)
+      console.log("[SW] Notification scheduled with ID:", id)
+    }
+  }
+  
+  if (event.data && event.data.type === "CANCEL_NOTIFICATION") {
+    const { id } = event.data
+    console.log("[SW] Canceling notification:", id)
+    if (id && scheduledNotifications.has(id)) {
+      clearTimeout(scheduledNotifications.get(id))
+      scheduledNotifications.delete(id)
+      console.log("[SW] Notification canceled:", id)
+    }
+  }
+  
+  if (event.data && event.data.type === "SHOW_NOTIFICATION") {
+    const { title, body } = event.data
+    console.log("[SW] Showing immediate notification:", { title, body })
+    self.registration.showNotification(title, {
+      body,
+      icon: "/favicon.ico",
+      badge: "/favicon.ico",
+      tag: "timeout-reminder",
+      requireInteraction: true,
+      actions: [
+        {
+          action: "dismiss",
+          title: "Dismiss",
+        },
+      ],
+    }).then(() => {
+      console.log("[SW] Immediate notification shown successfully")
+    }).catch(error => {
+      console.error("[SW] Error showing immediate notification:", error)
+    })
   }
 })
 

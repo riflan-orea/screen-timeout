@@ -24,14 +24,20 @@ export function useNotification() {
     lastNotificationTime: null,
   })
 
-  const { isSupported: swSupported, isRegistered: swRegistered, scheduleNotification } = useServiceWorker()
+  const { isSupported: swSupported, isRegistered: swRegistered, scheduleNotification, cancelNotification, showNotificationViaServiceWorker } = useServiceWorker()
 
   // Initialize notification state
   useEffect(() => {
     if (typeof window === 'undefined') return
     
     const isSupported = "Notification" in window
-    const permission = isSupported ? Notification.permission : "denied"
+    
+    // Check saved permission first, then current permission
+    const savedPermission = localStorage.getItem("notificationPermission") as NotificationPermission
+    const currentPermission = isSupported ? Notification.permission : "denied"
+    
+    // Use current permission if it exists, otherwise use saved
+    const permission = currentPermission !== "default" ? currentPermission : (savedPermission || currentPermission)
 
     // Load last notification time from localStorage
     const lastNotificationTime = localStorage.getItem("lastNotificationTime")
@@ -41,21 +47,30 @@ export function useNotification() {
       isSupported,
       lastNotificationTime: lastNotificationTime ? Number.parseInt(lastNotificationTime) : null,
     })
+
+    // Update localStorage if permission has changed
+    if (permission !== savedPermission) {
+      localStorage.setItem("notificationPermission", permission)
+    }
   }, [])
 
   // Request notification permission
   const requestPermission = useCallback(async (): Promise<boolean> => {
     if (!state.isSupported) {
-      console.warn("Notifications are not supported in this browser")
+      console.warn("[Notification] Notifications are not supported in this browser")
       return false
     }
 
     if (state.permission === "granted") {
+      console.log("[Notification] Permission already granted")
       return true
     }
 
     try {
+      console.log("[Notification] Requesting permission...")
       const permission = await Notification.requestPermission()
+      console.log("[Notification] Permission result:", permission)
+      
       setState((prev) => ({ ...prev, permission }))
 
       // Store permission state
@@ -65,7 +80,7 @@ export function useNotification() {
 
       return permission === "granted"
     } catch (error) {
-      console.error("Error requesting notification permission:", error)
+      console.error("[Notification] Error requesting notification permission:", error)
       return false
     }
   }, [state.isSupported, state.permission])
@@ -112,35 +127,33 @@ export function useNotification() {
 
   const showNotification = useCallback(
     async (options: NotificationOptions): Promise<boolean> => {
+      console.log("[Notification] Attempting to show notification:", {
+        isSupported: state.isSupported,
+        permission: state.permission,
+        swSupported,
+        swRegistered,
+        options
+      })
+
       if (!state.isSupported || state.permission !== "granted") {
-        console.warn("Cannot show notification: not supported or permission denied")
+        console.warn("[Notification] Cannot show notification: not supported or permission denied", {
+          isSupported: state.isSupported,
+          permission: state.permission
+        })
         return false
       }
 
       try {
-        if (swSupported && swRegistered) {
-          // For immediate notifications, still use direct API
-          const notification = new Notification(options.title, {
-            body: options.body,
-            icon: options.icon || "/favicon.ico",
-            tag: options.tag || "timeout-reminder",
-            requireInteraction: options.requireInteraction || true,
-            silent: false,
-          })
-
-          // Handle notification click
-          notification.onclick = () => {
-            if (typeof window !== 'undefined') {
-              window.focus()
-            }
-            notification.close()
-          }
-
-          // Auto-close after 10 seconds
-          setTimeout(() => {
-            notification.close()
-          }, 10000)
+        if (swSupported && swRegistered && navigator.serviceWorker.controller) {
+          console.log("[Notification] Using service worker notification")
+          // Use service worker for better background support
+          showNotificationViaServiceWorker(options.title, options.body)
         } else {
+          console.log("[Notification] Using direct notification API", {
+            swSupported,
+            swRegistered,
+            hasController: !!navigator.serviceWorker?.controller
+          })
           // Fallback to regular notification
           const notification = new Notification(options.title, {
             body: options.body,
@@ -151,10 +164,15 @@ export function useNotification() {
           })
 
           notification.onclick = () => {
+            console.log("[Notification] Notification clicked")
             if (typeof window !== 'undefined') {
               window.focus()
             }
             notification.close()
+          }
+
+          notification.onerror = (error) => {
+            console.error("[Notification] Notification error:", error)
           }
 
           setTimeout(() => {
@@ -173,26 +191,37 @@ export function useNotification() {
         }
         setState((prev) => ({ ...prev, lastNotificationTime: now }))
 
+        console.log("[Notification] Notification displayed successfully")
         return true
       } catch (error) {
-        console.error("Error showing notification:", error)
+        console.error("[Notification] Error showing notification:", error)
         return false
       }
     },
-    [state.isSupported, state.permission, playNotificationSound, triggerVibration, swSupported, swRegistered],
+    [state.isSupported, state.permission, playNotificationSound, triggerVibration, swSupported, swRegistered, showNotificationViaServiceWorker],
   )
 
   const scheduleTimeoutReminder = useCallback(
-    (delayMs: number, message?: string): boolean => {
+    (delayMs: number, message?: string, id?: string): boolean => {
       if (!swSupported || !swRegistered || state.permission !== "granted") {
+        console.warn("Cannot schedule notification: service worker not ready or permission denied")
         return false
       }
 
-      scheduleNotification("Timeout Reminder", message || "Time for a break! You've been working for a while.", delayMs)
+      scheduleNotification("Timeout Reminder", message || "Time for a break! You've been working for a while.", delayMs, id)
 
       return true
     },
     [swSupported, swRegistered, state.permission, scheduleNotification],
+  )
+
+  const cancelTimeoutReminder = useCallback(
+    (id: string): void => {
+      if (swSupported && swRegistered) {
+        cancelNotification(id)
+      }
+    },
+    [swSupported, swRegistered, cancelNotification],
   )
 
   // Show timeout reminder notification
@@ -222,6 +251,7 @@ export function useNotification() {
     showNotification,
     showTimeoutReminder,
     scheduleTimeoutReminder, // Added scheduled notification method
+    cancelTimeoutReminder, // Added cancel notification method
     playNotificationSound,
     triggerVibration,
   }

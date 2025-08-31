@@ -300,28 +300,51 @@ export default function TimeoutReminderApp() {
             </Card>
           )}
 
-          {/* Test notification section hidden
-            {notification.isEnabled && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Test Notifications</CardTitle>
-                  <CardDescription>
-                    Test your notification settings
-                    {notification.hasBackgroundSupport && " (Background support active)"}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Button variant="outline" className="w-full bg-transparent" onClick={handleTestNotification}>
-                    Send Test Notification
-                  </Button>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Click to test notification with sound and vibration
-                    {notification.hasBackgroundSupport && " • Works even when app is closed"}
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-            */}
+          {/* Debug Information */}
+          {process.env.NODE_ENV === 'development' && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Debug Information</CardTitle>
+                <CardDescription>Current notification and service worker status</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p><strong>Notifications Supported:</strong> {notification.isSupported ? "✅" : "❌"}</p>
+                    <p><strong>Permission:</strong> {notification.permission}</p>
+                    <p><strong>Notifications Enabled:</strong> {notification.isEnabled ? "✅" : "❌"}</p>
+                  </div>
+                  <div>
+                    <p><strong>Service Worker Supported:</strong> {"serviceWorker" in navigator ? "✅" : "❌"}</p>
+                    <p><strong>Background Support:</strong> {notification.hasBackgroundSupport ? "✅" : "❌"}</p>
+                    <p><strong>SW Controller:</strong> {typeof navigator !== 'undefined' && navigator.serviceWorker?.controller ? "✅" : "❌"}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Test notification section */}
+          {notification.isEnabled && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Test Notifications</CardTitle>
+                <CardDescription>
+                  Test your notification settings
+                  {notification.hasBackgroundSupport && " (Background support active)"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button variant="outline" className="w-full bg-transparent" onClick={() => notification.showTimeoutReminder("🔔 This is a test notification to verify your push notifications are working correctly!")}>
+                  Send Test Notification
+                </Button>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Click to test notification with sound and vibration
+                  {notification.hasBackgroundSupport && " • Works even when app is closed"}
+                </p>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </main>
 
