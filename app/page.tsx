@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect } from "react"
-import { Clock, Play, Pause, Info, Wifi, WifiOff } from "lucide-react"
+import { Clock, Play, Pause, Info, WifiOff, CheckCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -9,15 +9,16 @@ import { Progress } from "@/components/ui/progress"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { SettingsDialog } from "@/components/settings-dialog"
-import { PWAStatus } from "@/components/pwa-status"
 import { PWAInstallButton } from "@/components/pwa-install-button"
-import { PWAInstallHandler } from "@/components/pwa-install-handler"
 import { useNotification } from "@/hooks/use-notification"
+import { useServiceWorker } from "@/hooks/use-service-worker"
 import { useLocalStorage } from "@/hooks/use-local-storage"
 import { useTimeoutReminder } from "@/hooks/use-timeout-reminder"
+import Link from "next/link"
 
 export default function TimeoutReminderApp() {
   const notification = useNotification()
+  const serviceWorker = useServiceWorker()
   const [activeHours, setActiveHours] = useLocalStorage("activeHours", { start: "09:00", end: "18:00" })
   const [timeoutInterval, setTimeoutInterval] = useLocalStorage("timeoutInterval", { value: 1, unit: "hours" })
 
@@ -95,15 +96,10 @@ export default function TimeoutReminderApp() {
             <div className="flex items-center gap-2">
               <Clock className="h-6 w-6 text-primary" />
               <h1 className="text-xl font-semibold text-foreground">Timeout</h1>
-              {/* {notification.hasBackgroundSupport && (
-                <Badge variant="outline" className="text-xs">
-                  <Wifi className="h-3 w-3 mr-1" />
-                  Background
-                </Badge>
-              )} */}
             </div>
 
             <div className="flex items-center gap-2">
+
               <PWAInstallButton />
 
               <SettingsDialog
@@ -138,14 +134,31 @@ export default function TimeoutReminderApp() {
           )}
 
           {/* Service Worker Status Alert */}
-          {notification.isEnabled && !notification.hasBackgroundSupport && (
+          {/* {notification.isEnabled && !notification.hasBackgroundSupport && (
             <Alert>
               <WifiOff className="h-4 w-4" />
               <AlertDescription>
                 Background notifications are not available. Notifications will only work while the app is open.
+                <br />
+                <strong>For best results:</strong> Install as PWA and ensure battery optimization is disabled for the app.
               </AlertDescription>
             </Alert>
-          )}
+          )} */}
+
+          {/* Background Notification Success Alert */}
+          {/* {notification.isEnabled && notification.hasBackgroundSupport && (
+            <Alert className="border-green-200 bg-green-50">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <AlertDescription className="text-green-800">
+                <strong>Background notifications enabled!</strong> You'll receive reminders even when the app is closed.
+                {serviceWorker.isAndroid && (
+                  <span className="block mt-1 text-sm">
+                    Android device detected - make sure to install as PWA for best reliability.
+                  </span>
+                )}
+              </AlertDescription>
+            </Alert>
+          )} */}
 
           {/* Status Card */}
           <Card>
@@ -200,23 +213,7 @@ export default function TimeoutReminderApp() {
                   </div>
                 )}
 
-                {timeoutReminder.lastReminderTime && (
-                  <div className="p-4 bg-muted rounded-lg">
-                    <p className="font-medium">Last Reminder</p>
-                    <p className="text-sm text-muted-foreground">
-                      {formatTime12Hour(timeoutReminder.lastReminderTime)} on {timeoutReminder.lastReminderTime.toLocaleDateString()}
-                    </p>
-                  </div>
-                )}
 
-                {timeoutReminder.sessionStartTime && (
-                  <div className="p-4 bg-secondary/50 rounded-lg">
-                    <p className="font-medium">Session Started</p>
-                    <p className="text-sm text-muted-foreground">
-                      {formatTime12Hour(timeoutReminder.sessionStartTime)} on {timeoutReminder.sessionStartTime.toLocaleDateString()}
-                    </p>
-                  </div>
-                )}
               </div>
             </CardContent>
           </Card>
@@ -259,6 +256,11 @@ export default function TimeoutReminderApp() {
                   ✓ Background notifications enabled - you'll receive reminders even when the app is closed
                 </p>
               )}
+              {notification.isEnabled && !notification.hasBackgroundSupport && (
+                <p className="text-xs text-orange-600 mt-3">
+                  ⚠️ Install as PWA for better background notification support
+                </p>
+              )}
               {timeoutReminder.isStarting && (
                 <p className="text-xs text-blue-600 mt-3">
                   ⏳ Starting timer...
@@ -277,8 +279,7 @@ export default function TimeoutReminderApp() {
             </CardContent>
           </Card>
 
-          {/* PWA Status Card */}
-          {/* <PWAStatus /> */}
+
 
           {/* Notification Setup Card */}
           {!notification.isEnabled && (
@@ -300,35 +301,11 @@ export default function TimeoutReminderApp() {
             </Card>
           )}
 
-          {/* Test notification section hidden
-            {notification.isEnabled && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Test Notifications</CardTitle>
-                  <CardDescription>
-                    Test your notification settings
-                    {notification.hasBackgroundSupport && " (Background support active)"}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Button variant="outline" className="w-full bg-transparent" onClick={handleTestNotification}>
-                    Send Test Notification
-                  </Button>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Click to test notification with sound and vibration
-                    {notification.hasBackgroundSupport && " • Works even when app is closed"}
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-            */}
+
         </div>
       </main>
 
-      {/* PWA Install Handler */}
-      <div className="fixed bottom-4 left-4 right-4 z-50">
-        <PWAInstallHandler />
-      </div>
+
     </div>
   )
 }
