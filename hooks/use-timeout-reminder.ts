@@ -88,20 +88,19 @@ export function useTimeoutReminder(config: TimeoutReminderConfig, onTimeout: () 
             type: 'SCHEDULE_BACKGROUND_NOTIFICATION',
             ...notificationData
           })
-          console.log('[TimeoutReminder] Background notification scheduled:', notificationData)
           
           // Also register for background sync for better reliability
           if ('sync' in registration) {
-            registration.sync.register('timeout-reminder-sync').catch(error => {
-              console.warn('[TimeoutReminder] Background sync registration failed:', error)
+            (registration as any).sync.register('timeout-reminder-sync').catch((error: any) => {
+              // Silent error handling
             })
           }
         }
       }).catch(error => {
-        console.error('[TimeoutReminder] Error scheduling background notification:', error)
+        // Silent error handling
       })
     } catch (error) {
-      console.error('[TimeoutReminder] Error scheduling notification:', error)
+      // Silent error handling
     }
   }, [])
 
@@ -119,13 +118,12 @@ export function useTimeoutReminder(config: TimeoutReminderConfig, onTimeout: () 
           registration.active.postMessage({
             type: 'CANCEL_ALL_NOTIFICATIONS'
           })
-          console.log('[TimeoutReminder] All background notifications cancelled')
         }
       }).catch(error => {
-        console.error('[TimeoutReminder] Error cancelling notifications:', error)
+        // Silent error handling
       })
     } catch (error) {
-      console.error('[TimeoutReminder] Error cancelling notifications:', error)
+      // Silent error handling
     }
   }, [])
 
@@ -209,7 +207,7 @@ export function useTimeoutReminder(config: TimeoutReminderConfig, onTimeout: () 
       try {
         await onTimeoutRef.current()
       } catch (error) {
-        console.error('[TimeoutReminder] Error in onTimeout callback:', error)
+        // Silent error handling
       }
 
       // Restart timer for next interval

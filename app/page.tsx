@@ -94,19 +94,15 @@ export default function TimeoutReminderApp() {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-                             <Clock className="h-6 w-6 text-primary" />
-               <h1 className="text-xl font-semibold text-foreground">Timeout</h1>
+              <Clock className="h-6 w-6 text-primary" />
+              <h1 className="text-xl font-semibold text-foreground">Timeout</h1>
             </div>
 
-                         <div className="flex items-center gap-2">
-               {process.env.NODE_ENV === 'development' && (
-                 <Link href="/test" className="text-xs text-muted-foreground hover:text-foreground">
-                   Test
-                 </Link>
-               )}
-               <PWAInstallButton />
+            <div className="flex items-center gap-2">
 
-               <SettingsDialog
+              <PWAInstallButton />
+
+              <SettingsDialog
                 notificationsEnabled={notification.isEnabled}
                 onNotificationToggle={handleNotificationToggle}
                 activeHours={activeHours}
@@ -138,7 +134,7 @@ export default function TimeoutReminderApp() {
           )}
 
           {/* Service Worker Status Alert */}
-          {notification.isEnabled && !notification.hasBackgroundSupport && (
+          {/* {notification.isEnabled && !notification.hasBackgroundSupport && (
             <Alert>
               <WifiOff className="h-4 w-4" />
               <AlertDescription>
@@ -147,10 +143,10 @@ export default function TimeoutReminderApp() {
                 <strong>For best results:</strong> Install as PWA and ensure battery optimization is disabled for the app.
               </AlertDescription>
             </Alert>
-          )}
+          )} */}
 
           {/* Background Notification Success Alert */}
-          {notification.isEnabled && notification.hasBackgroundSupport && (
+          {/* {notification.isEnabled && notification.hasBackgroundSupport && (
             <Alert className="border-green-200 bg-green-50">
               <CheckCircle className="h-4 w-4 text-green-600" />
               <AlertDescription className="text-green-800">
@@ -162,7 +158,7 @@ export default function TimeoutReminderApp() {
                 )}
               </AlertDescription>
             </Alert>
-          )}
+          )} */}
 
           {/* Status Card */}
           <Card>
@@ -217,7 +213,7 @@ export default function TimeoutReminderApp() {
                   </div>
                 )}
 
-                
+
               </div>
             </CardContent>
           </Card>
@@ -283,7 +279,7 @@ export default function TimeoutReminderApp() {
             </CardContent>
           </Card>
 
-          
+
 
           {/* Notification Setup Card */}
           {!notification.isEnabled && (
@@ -305,7 +301,7 @@ export default function TimeoutReminderApp() {
             </Card>
           )}
 
-          
+
         </div>
       </main>
 

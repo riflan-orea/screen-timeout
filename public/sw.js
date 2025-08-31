@@ -273,10 +273,6 @@ const showNotificationWithOptions = async (title, body, options = {}) => {
           action: "dismiss",
           title: "Dismiss",
         },
-        {
-          action: "snooze",
-          title: "Snooze 5 min",
-        },
       ],
       data: {
         url: "/", // URL to open when notification is clicked
@@ -381,18 +377,7 @@ self.addEventListener("notificationclick", (event) => {
     return
   }
   
-  if (event.action === "snooze") {
-    console.log("[SW] Notification snoozed")
-    // Snooze for 5 minutes
-    const snoozeData = {
-      title: event.notification.title,
-      body: event.notification.body,
-      scheduledTime: Date.now() + (5 * 60 * 1000), // 5 minutes
-      id: `snooze-${Date.now()}`
-    }
-    storeScheduledNotificationData(snoozeData)
-    return
-  }
+
 
   // Focus or open the app
   event.waitUntil(
