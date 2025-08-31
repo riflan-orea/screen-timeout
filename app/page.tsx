@@ -254,7 +254,7 @@ export default function TimeoutReminderApp() {
                   Note: Enable notifications in settings to receive automatic timeout reminders
                 </p>
               )}
-              {notification.isEnabled && !timeoutReminder.isWithinActiveHours && (
+              {!timeoutReminder.isWithinActiveHours && (
                 <p className="text-xs text-muted-foreground mt-3">
                   Timer is disabled outside of active hours ({formatActiveHours()})
                 </p>
