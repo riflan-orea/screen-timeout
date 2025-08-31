@@ -1,6 +1,6 @@
-const CACHE_NAME = "timeout-reminder-v4"
-const STATIC_CACHE_NAME = "timeout-reminder-static-v4"
-const DYNAMIC_CACHE_NAME = "timeout-reminder-dynamic-v4"
+const CACHE_NAME = "timeout-reminder-v5"
+const STATIC_CACHE_NAME = "timeout-reminder-static-v5"
+const DYNAMIC_CACHE_NAME = "timeout-reminder-dynamic-v5"
 
 // Assets to cache on install
 const STATIC_ASSETS = [
@@ -120,7 +120,7 @@ function startBackgroundNotificationChecker() {
 // Check and show scheduled notifications
 async function checkAndShowScheduledNotifications() {
   try {
-    // Get scheduled notification data from IndexedDB or localStorage
+    // Get scheduled notification data from IndexedDB
     const notificationData = await getScheduledNotificationData()
     
     if (notificationData && notificationData.scheduledTime) {
@@ -155,33 +155,58 @@ async function checkAndShowScheduledNotifications() {
   }
 }
 
-// Store notification data (using IndexedDB for better persistence)
+// Store notification data using IndexedDB for better persistence
 async function storeScheduledNotificationData(data) {
   try {
-    // For now, use a simple approach with a custom storage key
-    // In a production app, you might want to use IndexedDB
-    const storageKey = 'timeout-reminder-scheduled-notification'
-    const storageData = {
+    // Use IndexedDB for persistent storage
+    const db = await openNotificationDB()
+    const transaction = db.transaction(['notifications'], 'readwrite')
+    const store = transaction.objectStore('notifications')
+    
+    await store.put({
+      id: 'current-notification',
       ...data,
       storedAt: Date.now()
-    }
+    })
     
-    // Store in a way that persists across service worker restarts
-    await self.registration.storage.set(storageKey, storageData)
-    console.log("[SW] Notification data stored:", storageData)
+    console.log("[SW] Notification data stored in IndexedDB:", data)
   } catch (error) {
     console.error("[SW] Error storing notification data:", error)
+    // Fallback to localStorage if IndexedDB fails
+    try {
+      localStorage.setItem('timeout-reminder-scheduled-notification', JSON.stringify({
+        ...data,
+        storedAt: Date.now()
+      }))
+      console.log("[SW] Notification data stored in localStorage (fallback)")
+    } catch (localStorageError) {
+      console.error("[SW] Error storing in localStorage:", localStorageError)
+    }
   }
 }
 
 // Get stored notification data
 async function getScheduledNotificationData() {
   try {
-    const storageKey = 'timeout-reminder-scheduled-notification'
-    const data = await self.registration.storage.get(storageKey)
-    return data || null
+    // Try IndexedDB first
+    const db = await openNotificationDB()
+    const transaction = db.transaction(['notifications'], 'readonly')
+    const store = transaction.objectStore('notifications')
+    const result = await store.get('current-notification')
+    
+    if (result) {
+      return result
+    }
   } catch (error) {
-    console.error("[SW] Error getting notification data:", error)
+    console.warn("[SW] IndexedDB not available, trying localStorage:", error)
+  }
+  
+  // Fallback to localStorage
+  try {
+    const stored = localStorage.getItem('timeout-reminder-scheduled-notification')
+    return stored ? JSON.parse(stored) : null
+  } catch (error) {
+    console.error("[SW] Error getting notification data from localStorage:", error)
     return null
   }
 }
@@ -189,12 +214,40 @@ async function getScheduledNotificationData() {
 // Clear stored notification data
 async function clearScheduledNotificationData() {
   try {
-    const storageKey = 'timeout-reminder-scheduled-notification'
-    await self.registration.storage.delete(storageKey)
-    console.log("[SW] Notification data cleared")
+    // Clear from IndexedDB
+    const db = await openNotificationDB()
+    const transaction = db.transaction(['notifications'], 'readwrite')
+    const store = transaction.objectStore('notifications')
+    await store.delete('current-notification')
+    console.log("[SW] Notification data cleared from IndexedDB")
   } catch (error) {
-    console.error("[SW] Error clearing notification data:", error)
+    console.warn("[SW] Could not clear from IndexedDB:", error)
   }
+  
+  // Clear from localStorage as well
+  try {
+    localStorage.removeItem('timeout-reminder-scheduled-notification')
+    console.log("[SW] Notification data cleared from localStorage")
+  } catch (error) {
+    console.error("[SW] Error clearing from localStorage:", error)
+  }
+}
+
+// Open IndexedDB for notification storage
+function openNotificationDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open('TimeoutReminderDB', 1)
+    
+    request.onerror = () => reject(request.error)
+    request.onsuccess = () => resolve(request.result)
+    
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result
+      if (!db.objectStoreNames.contains('notifications')) {
+        db.createObjectStore('notifications', { keyPath: 'id' })
+      }
+    }
+  })
 }
 
 // Helper function to show notification with Android-specific options
@@ -225,14 +278,6 @@ const showNotificationWithOptions = async (title, body, options = {}) => {
           title: "Snooze 5 min",
         },
       ],
-      // Android-specific options
-      android: {
-        icon: "/icon-192.png",
-        color: "#000000",
-        priority: "high",
-        sticky: true,
-        channelId: "timeout-reminders",
-      },
       data: {
         url: "/", // URL to open when notification is clicked
         timestamp: Date.now()

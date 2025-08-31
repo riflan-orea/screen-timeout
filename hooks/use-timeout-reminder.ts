@@ -76,7 +76,7 @@ export function useTimeoutReminder(config: TimeoutReminderConfig, onTimeout: () 
         title: "Timeout Reminder",
         body: message,
         scheduledTime: Date.now() + delayMs,
-        interval: delayMs
+        interval: delayMs // Make it recurring
       }
       
       localStorage.setItem('scheduledNotification', JSON.stringify(notificationData))
@@ -89,6 +89,13 @@ export function useTimeoutReminder(config: TimeoutReminderConfig, onTimeout: () 
             ...notificationData
           })
           console.log('[TimeoutReminder] Background notification scheduled:', notificationData)
+          
+          // Also register for background sync for better reliability
+          if ('sync' in registration) {
+            registration.sync.register('timeout-reminder-sync').catch(error => {
+              console.warn('[TimeoutReminder] Background sync registration failed:', error)
+            })
+          }
         }
       }).catch(error => {
         console.error('[TimeoutReminder] Error scheduling background notification:', error)

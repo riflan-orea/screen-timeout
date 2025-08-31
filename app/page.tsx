@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect } from "react"
-import { Clock, Play, Pause, Info, WifiOff } from "lucide-react"
+import { Clock, Play, Pause, Info, WifiOff, CheckCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -11,12 +11,14 @@ import { ThemeToggle } from "@/components/theme-toggle"
 import { SettingsDialog } from "@/components/settings-dialog"
 import { PWAInstallButton } from "@/components/pwa-install-button"
 import { useNotification } from "@/hooks/use-notification"
+import { useServiceWorker } from "@/hooks/use-service-worker"
 import { useLocalStorage } from "@/hooks/use-local-storage"
 import { useTimeoutReminder } from "@/hooks/use-timeout-reminder"
 import Link from "next/link"
 
 export default function TimeoutReminderApp() {
   const notification = useNotification()
+  const serviceWorker = useServiceWorker()
   const [activeHours, setActiveHours] = useLocalStorage("activeHours", { start: "09:00", end: "18:00" })
   const [timeoutInterval, setTimeoutInterval] = useLocalStorage("timeoutInterval", { value: 1, unit: "hours" })
 
@@ -141,6 +143,23 @@ export default function TimeoutReminderApp() {
               <WifiOff className="h-4 w-4" />
               <AlertDescription>
                 Background notifications are not available. Notifications will only work while the app is open.
+                <br />
+                <strong>For best results:</strong> Install as PWA and ensure battery optimization is disabled for the app.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Background Notification Success Alert */}
+          {notification.isEnabled && notification.hasBackgroundSupport && (
+            <Alert className="border-green-200 bg-green-50">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <AlertDescription className="text-green-800">
+                <strong>Background notifications enabled!</strong> You'll receive reminders even when the app is closed.
+                {serviceWorker.isAndroid && (
+                  <span className="block mt-1 text-sm">
+                    Android device detected - make sure to install as PWA for best reliability.
+                  </span>
+                )}
               </AlertDescription>
             </Alert>
           )}

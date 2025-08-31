@@ -1,5 +1,5 @@
 import type React from "react"
-import type { Metadata } from "next"
+import type { Metadata, Viewport } from "next"
 import { GeistSans } from "geist/font/sans"
 import { GeistMono } from "geist/font/mono"
 import { Analytics } from "@vercel/analytics/next"
@@ -10,7 +10,6 @@ import "./globals.css"
 export const metadata: Metadata = {
   title: "Timeout Reminder",
   description: "Stay productive with smart timeout reminders",
-  generator: "v0.app",
   manifest: "/manifest.json",
   icons: {
     icon: [
@@ -26,14 +25,6 @@ export const metadata: Metadata = {
     shortcut: [
       { url: "/icon-192.svg", sizes: "192x192", type: "image/svg+xml" },
     ],
-  },
-  themeColor: "#000000",
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 1,
-    userScalable: false,
-    viewportFit: "cover",
   },
   appleWebApp: {
     capable: true,
@@ -58,6 +49,15 @@ export const metadata: Metadata = {
     "msapplication-TileColor": "#000000",
     "msapplication-config": "none",
   },
+}
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
+  themeColor: "#000000",
 }
 
 export default function RootLayout({

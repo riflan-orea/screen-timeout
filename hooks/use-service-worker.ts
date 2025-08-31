@@ -63,6 +63,17 @@ export function useServiceWorker() {
             if (registration.active) {
               console.log("[SW] Service worker is active and ready")
               setIsRegistered(true)
+              
+              // For Android, send a test message to ensure communication works
+              if (android) {
+                setTimeout(() => {
+                  registration.active?.postMessage({
+                    type: 'TEST_COMMUNICATION',
+                    timestamp: Date.now()
+                  })
+                  console.log("[SW] Sent test message to Android service worker")
+                }, 1000)
+              }
             } else if (registration.installing) {
               console.log("[SW] Service worker is installing...")
               registration.installing.addEventListener('statechange', () => {
@@ -70,7 +81,7 @@ export function useServiceWorker() {
                   console.log("[SW] Service worker installed")
                   // For Android, we might need to wait a bit longer
                   if (android) {
-                    setTimeout(() => setIsRegistered(true), 1000)
+                    setTimeout(() => setIsRegistered(true), 2000)
                   } else {
                     setIsRegistered(true)
                   }
@@ -80,7 +91,7 @@ export function useServiceWorker() {
               console.log("[SW] Service worker is waiting")
               // For Android, we might need to wait a bit longer
               if (android) {
-                setTimeout(() => setIsRegistered(true), 1000)
+                setTimeout(() => setIsRegistered(true), 2000)
               } else {
                 setIsRegistered(true)
               }
