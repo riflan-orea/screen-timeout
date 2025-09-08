@@ -58,6 +58,11 @@ export default function TimeoutReminderApp() {
     }
   }
 
+  const handleTestNotification = async () => {
+    console.log("Test notification button clicked")
+    await notification.testNotification()
+  }
+
 
 
   const formatActiveHours = () => {
@@ -300,28 +305,30 @@ export default function TimeoutReminderApp() {
             </Card>
           )}
 
-          {/* Test notification section hidden
-            {notification.isEnabled && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Test Notifications</CardTitle>
-                  <CardDescription>
-                    Test your notification settings
-                    {notification.hasBackgroundSupport && " (Background support active)"}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Button variant="outline" className="w-full bg-transparent" onClick={handleTestNotification}>
-                    Send Test Notification
-                  </Button>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Click to test notification with sound and vibration
-                    {notification.hasBackgroundSupport && " • Works even when app is closed"}
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-            */}
+          {/* Test notification section for debugging */}
+          {notification.isEnabled && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Test Notifications</CardTitle>
+                <CardDescription>
+                  Test your notification settings (macOS debugging)
+                  {notification.hasBackgroundSupport && " (Background support active)"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button variant="outline" className="w-full bg-transparent" onClick={handleTestNotification}>
+                  Send Test Notification
+                </Button>
+                <Button variant="outline" size="sm" className="w-full" onClick={notification.debugNotificationEnvironment}>
+                  Debug Notification Environment
+                </Button>
+                <p className="text-xs text-muted-foreground">
+                  Click to test notification with sound and vibration. Check browser console for debug info.
+                  {notification.hasBackgroundSupport && " • Works even when app is closed"}
+                </p>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </main>
 

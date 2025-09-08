@@ -97,19 +97,36 @@ self.addEventListener("message", (event) => {
     const { title, body, delay } = event.data
 
     setTimeout(() => {
-      self.registration.showNotification(title, {
+      // Enhanced notification options for better macOS compatibility
+      const notificationOptions = {
         body,
-        icon: "/favicon.ico",
-        badge: "/favicon.ico",
+        icon: "/icon-192.png", // Use PNG instead of ICO for better compatibility
+        badge: "/icon-192.png",
         tag: "timeout-reminder",
-        requireInteraction: true,
+        requireInteraction: false, // macOS works better with false
+        silent: false,
+        timestamp: Date.now(),
+        renotify: true, // Important for macOS to show repeated notifications
         actions: [
           {
             action: "dismiss",
             title: "Dismiss",
           },
         ],
-      })
+        // Add platform-specific data
+        data: {
+          url: "/",
+          timestamp: Date.now()
+        }
+      }
+
+      self.registration.showNotification(title, notificationOptions)
+        .then(() => {
+          console.log("[SW] Notification shown successfully")
+        })
+        .catch((error) => {
+          console.error("[SW] Failed to show notification:", error)
+        })
     }, delay)
   }
 })
@@ -120,6 +137,16 @@ self.addEventListener("notificationclick", (event) => {
   if (event.action === "dismiss") {
     return
   }
+
+  // Send message to all clients about notification click
+  self.clients.matchAll().then(clients => {
+    clients.forEach(client => {
+      client.postMessage({
+        type: 'NOTIFICATION_CLICK',
+        timestamp: Date.now()
+      })
+    })
+  })
 
   // Focus or open the app
   event.waitUntil(

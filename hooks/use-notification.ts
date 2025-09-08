@@ -26,6 +26,27 @@ export function useNotification() {
 
   const { isSupported: swSupported, isRegistered: swRegistered, scheduleNotification } = useServiceWorker()
 
+  // Debug function to check notification environment
+  const debugNotificationEnvironment = useCallback(() => {
+    if (typeof window === 'undefined') return
+    
+    const isMacOS = navigator.platform.includes('Mac')
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
+    const isChrome = /chrome/i.test(navigator.userAgent)
+    
+    console.log('=== Notification Debug Info ===')
+    console.log('Platform:', navigator.platform)
+    console.log('User Agent:', navigator.userAgent)
+    console.log('Is macOS:', isMacOS)
+    console.log('Is Safari:', isSafari)
+    console.log('Is Chrome:', isChrome)
+    console.log('Notification supported:', 'Notification' in window)
+    console.log('Service Worker supported:', 'serviceWorker' in navigator)
+    console.log('Current permission:', Notification.permission)
+    console.log('SW registered:', swRegistered)
+    console.log('================================')
+  }, [swRegistered])
+
   // Initialize notification state
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -55,12 +76,28 @@ export function useNotification() {
     }
 
     try {
+      // For macOS Safari, we need to handle permission requests more carefully
+      const isMacOS = typeof navigator !== 'undefined' && navigator.platform.includes('Mac')
+      const isSafari = typeof navigator !== 'undefined' && /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
+      
+      if (isMacOS && isSafari) {
+        // Safari on macOS requires user interaction and may need a delay
+        console.log("Requesting notification permission on macOS Safari...")
+      }
+
       const permission = await Notification.requestPermission()
       setState((prev) => ({ ...prev, permission }))
 
       // Store permission state
       if (typeof window !== 'undefined') {
         localStorage.setItem("notificationPermission", permission)
+      }
+
+      // Log permission result for debugging
+      console.log(`Notification permission result: ${permission}`)
+      
+      if (permission === "denied" && isMacOS) {
+        console.warn("Notification permission denied on macOS. Please check System Settings > Notifications and ensure the browser is allowed to show notifications.")
       }
 
       return permission === "granted"
@@ -118,38 +155,65 @@ export function useNotification() {
       }
 
       try {
-        if (swSupported && swRegistered) {
-          // For immediate notifications, still use direct API
-          const notification = new Notification(options.title, {
-            body: options.body,
-            icon: options.icon || "/favicon.ico",
-            tag: options.tag || "timeout-reminder",
-            requireInteraction: options.requireInteraction || true,
-            silent: false,
-          })
+        // Detect macOS and Safari
+        const isMacOS = typeof navigator !== 'undefined' && navigator.platform.includes('Mac')
+        const isSafari = typeof navigator !== 'undefined' && /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
+        
+        // Get absolute icon URL for better compatibility
+        const iconUrl = options.icon || (typeof window !== 'undefined' ? `${window.location.origin}/icon-192.png` : "/icon-192.png")
+        
+        // macOS/Safari specific notification options
+        const notificationOptions = {
+          body: options.body,
+          icon: iconUrl,
+          tag: options.tag || "timeout-reminder",
+          requireInteraction: isMacOS ? false : (options.requireInteraction || true), // macOS works better with false
+          silent: false,
+          // Add macOS specific options
+          ...(isMacOS && {
+            badge: iconUrl,
+            timestamp: Date.now(),
+            renotify: true, // Important for macOS to show repeated notifications
+          }),
+        }
 
-          // Handle notification click
-          notification.onclick = () => {
-            if (typeof window !== 'undefined') {
-              window.focus()
+        let notification: Notification
+
+        // Use service worker registration for better macOS compatibility when available
+        if (swSupported && swRegistered && 'serviceWorker' in navigator && navigator.serviceWorker.ready) {
+          try {
+            const registration = await navigator.serviceWorker.ready
+            await registration.showNotification(options.title, notificationOptions)
+            
+            // For service worker notifications, we need to handle click events differently
+            navigator.serviceWorker.addEventListener('message', (event) => {
+              if (event.data && event.data.type === 'NOTIFICATION_CLICK') {
+                if (typeof window !== 'undefined') {
+                  window.focus()
+                }
+              }
+            })
+          } catch (swError) {
+            console.warn("Service worker notification failed, falling back to direct API:", swError)
+            // Fallback to direct notification API
+            notification = new Notification(options.title, notificationOptions)
+            
+            notification.onclick = () => {
+              if (typeof window !== 'undefined') {
+                window.focus()
+              }
+              notification.close()
             }
-            notification.close()
-          }
 
-          // Auto-close after 10 seconds
-          setTimeout(() => {
-            notification.close()
-          }, 10000)
+            // macOS notifications should auto-close after a reasonable time
+            setTimeout(() => {
+              notification.close()
+            }, isMacOS ? 8000 : 10000)
+          }
         } else {
-          // Fallback to regular notification
-          const notification = new Notification(options.title, {
-            body: options.body,
-            icon: options.icon || "/favicon.ico",
-            tag: options.tag || "timeout-reminder",
-            requireInteraction: options.requireInteraction || true,
-            silent: false,
-          })
-
+          // Direct notification API
+          notification = new Notification(options.title, notificationOptions)
+          
           notification.onclick = () => {
             if (typeof window !== 'undefined') {
               window.focus()
@@ -157,9 +221,20 @@ export function useNotification() {
             notification.close()
           }
 
+          notification.onerror = (error) => {
+            console.error("Notification error:", error)
+          }
+
+          notification.onshow = () => {
+            console.log("Notification shown successfully")
+          }
+
+          // macOS notifications should auto-close after a reasonable time
           setTimeout(() => {
-            notification.close()
-          }, 10000)
+            if (notification) {
+              notification.close()
+            }
+          }, isMacOS ? 8000 : 10000)
         }
 
         // Play sound and trigger vibration
@@ -209,6 +284,19 @@ export function useNotification() {
     [showNotification],
   )
 
+  // Test notification function for debugging
+  const testNotification = useCallback(async (): Promise<boolean> => {
+    console.log("Testing notification...")
+    debugNotificationEnvironment()
+    
+    return await showNotification({
+      title: "🔔 Test Notification",
+      body: "This is a test notification to verify macOS compatibility. If you see this, notifications are working!",
+      tag: "test-notification",
+      requireInteraction: false,
+    })
+  }, [showNotification, debugNotificationEnvironment])
+
   const isEnabled = state.isSupported && state.permission === "granted"
   const hasBackgroundSupport = swSupported && swRegistered
 
@@ -224,5 +312,7 @@ export function useNotification() {
     scheduleTimeoutReminder, // Added scheduled notification method
     playNotificationSound,
     triggerVibration,
+    testNotification, // Added test function for debugging
+    debugNotificationEnvironment, // Added debug function
   }
 }
