@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Settings, Clock, Bell, Info } from "lucide-react"
+import { Settings, Clock, Bell, Info, RotateCcw, CheckCircle, XCircle, AlertTriangle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -28,6 +28,14 @@ interface SettingsDialogProps {
   timeoutInterval: { value: number; unit: string }
   onTimeoutIntervalChange: (interval: { value: number; unit: string }) => void
   onTimerReset?: () => void
+  pushSubscription?: {
+    isSupported: boolean
+    isSubscribed: boolean
+    isLoading: boolean
+    error: string | null
+    resetSubscription: () => Promise<boolean>
+    clearError: () => void
+  }
 }
 
 export function SettingsDialog({
@@ -38,6 +46,7 @@ export function SettingsDialog({
   timeoutInterval,
   onTimeoutIntervalChange,
   onTimerReset,
+  pushSubscription,
 }: SettingsDialogProps) {
   const [localActiveHours, setLocalActiveHours] = useState(activeHours)
   const [localTimeoutInterval, setLocalTimeoutInterval] = useState(timeoutInterval)
@@ -73,12 +82,30 @@ export function SettingsDialog({
   }
 
   const [canEnableNotifications, setCanEnableNotifications] = useState(false)
+  const [isResettingSubscription, setIsResettingSubscription] = useState(false)
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       setCanEnableNotifications("Notification" in window)
     }
   }, [])
+
+  const handleResetSubscription = async () => {
+    if (!pushSubscription) return
+    
+    setIsResettingSubscription(true)
+    try {
+      const success = await pushSubscription.resetSubscription()
+      if (success) {
+        // Optionally show a success message
+        console.log('Push subscription reset successfully')
+      }
+    } catch (error) {
+      console.error('Failed to reset push subscription:', error)
+    } finally {
+      setIsResettingSubscription(false)
+    }
+  }
 
   const isValidTimeRange = () => {
     const startMinutes =
@@ -251,6 +278,95 @@ export function SettingsDialog({
                       <p className="text-sm text-muted-foreground">
                         You'll receive reminders with sound and vibration (if supported)
                       </p>
+                    </div>
+                  )}
+
+                  {/* Push Subscription Management */}
+                  {notificationsEnabled && pushSubscription && (
+                    <div className="space-y-4 pt-4 border-t border-border">
+                      <div>
+                        <Label className="text-sm font-medium">Push Subscription Status</Label>
+                        <p className="text-xs text-muted-foreground mb-2">
+                          Manage your push notification subscription
+                        </p>
+                      </div>
+
+                      <div className="space-y-3">
+                        {/* Subscription Status */}
+                        <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                          <div className="flex items-center gap-2">
+                            {pushSubscription.isSubscribed ? (
+                              <CheckCircle className="h-4 w-4 text-green-600" />
+                            ) : (
+                              <XCircle className="h-4 w-4 text-red-600" />
+                            )}
+                            <span className="text-sm font-medium">
+                              {pushSubscription.isSubscribed ? "Subscribed" : "Not Subscribed"}
+                            </span>
+                          </div>
+                          {pushSubscription.isLoading && (
+                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                          )}
+                        </div>
+
+                        {/* Error Display */}
+                        {pushSubscription.error && (
+                          <div className="flex items-start gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                            <AlertTriangle className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-destructive">Subscription Error</p>
+                              <p className="text-xs text-muted-foreground break-words">
+                                {pushSubscription.error}
+                              </p>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={pushSubscription.clearError}
+                                className="mt-2 h-7 text-xs"
+                              >
+                                Clear Error
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Reset Button */}
+                        <div className="space-y-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleResetSubscription}
+                            disabled={isResettingSubscription || pushSubscription.isLoading}
+                            className="w-full flex items-center gap-2"
+                          >
+                            <RotateCcw className={`h-4 w-4 ${isResettingSubscription ? 'animate-spin' : ''}`} />
+                            {isResettingSubscription ? 'Resetting...' : 'Reset Push Subscription'}
+                          </Button>
+                          <p className="text-xs text-muted-foreground">
+                            Reset if notifications stop working. This will unsubscribe and resubscribe to push notifications.
+                          </p>
+                        </div>
+
+                        {/* Troubleshooting Info */}
+                        {!pushSubscription.isSubscribed && (
+                          <div className="p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
+                            <div className="flex items-start gap-2">
+                              <Info className="h-4 w-4 text-orange-600 mt-0.5 flex-shrink-0" />
+                              <div>
+                                <p className="text-sm font-medium text-orange-800 dark:text-orange-200">
+                                  Troubleshooting Tips
+                                </p>
+                                <ul className="text-xs text-orange-700 dark:text-orange-300 mt-1 space-y-1">
+                                  <li>• Make sure notifications are enabled in browser settings</li>
+                                  <li>• Try refreshing the page and enabling notifications again</li>
+                                  <li>• Check if your browser supports push notifications</li>
+                                  <li>• Clear browser cache and cookies if issues persist</li>
+                                </ul>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </CardContent>
