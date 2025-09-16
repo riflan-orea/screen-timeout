@@ -440,14 +440,14 @@ export function SettingsDialog({
                               className={
                                 notificationsEnabled
                                   ? "text-green-600"
-                                  : Notification.permission === "denied"
+                                  : typeof Notification !== "undefined" && Notification.permission === "denied"
                                   ? "text-red-600"
                                   : "text-orange-600"
                               }
                             >
                               {notificationsEnabled
                                 ? "✓ Granted"
-                                : Notification.permission === "denied"
+                                : typeof Notification !== "undefined" && Notification.permission === "denied"
                                 ? "✗ Denied"
                                 : "○ Default"}
                             </span>

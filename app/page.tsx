@@ -60,6 +60,12 @@ export default function TimeoutReminderApp() {
 
   const handleResubscribe = async () => {
     try {
+      // Check if Notification API is available
+      if (typeof Notification === "undefined") {
+        await notification.showTimeoutReminder("Notifications are not supported in this browser.")
+        return
+      }
+
       // Force re-request notification permissions
       const permission = await Notification.requestPermission()
 
