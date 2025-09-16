@@ -127,7 +127,14 @@ export function SettingsDialog({
   };
 
   const isValidInterval = () => {
-    return localTimeoutInterval.value > 0 && localTimeoutInterval.value <= 480; // Max 8 hours
+    const { value, unit } = localTimeoutInterval;
+
+    // Check minimum and maximum values based on unit
+    if (unit === "minutes") {
+      return value >= 20 && value <= 60; // Min 20 minutes, max 1 hours (60 minutes)
+    } else {
+      return value >= 1 && value <= 5; // Hours: min 1 hour, max 5 hours
+    }
   };
 
   const canSave = isValidTimeRange() && isValidInterval();
@@ -243,34 +250,55 @@ export function SettingsDialog({
                   <CardTitle className="text-base">Timeout Interval</CardTitle>
                   <CardDescription>
                     How often you want to receive reminders
+                    {localTimeoutInterval.unit === "minutes"
+                      ? " (20 minutes to 1 hours)"
+                      : " (1 to 5 hours)"
+                    }
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="flex gap-2">
                     <Input
                       type="number"
-                      min="1"
-                      max="480"
+                      min={localTimeoutInterval.unit === "minutes" ? "20" : "1"}
+                      max={localTimeoutInterval.unit === "minutes" ? "480" : "5"}
                       value={localTimeoutInterval.value}
-                      onChange={(e) =>
+                      onChange={(e) => {
+                        const newValue = Number.parseInt(e.target.value) || (localTimeoutInterval.unit === "minutes" ? 20 : 1);
+                        const minValue = localTimeoutInterval.unit === "minutes" ? 20 : 1;
+                        const maxValue = localTimeoutInterval.unit === "minutes" ? 480 : 5;
                         setLocalTimeoutInterval({
                           ...localTimeoutInterval,
                           value: Math.max(
-                            1,
-                            Math.min(480, Number.parseInt(e.target.value) || 1)
+                            minValue,
+                            Math.min(maxValue, newValue)
                           ),
-                        })
-                      }
+                        });
+                      }}
                       className="flex-1 border border-input"
                     />
                     <Select
                       value={localTimeoutInterval.unit}
-                      onValueChange={(value) =>
+                      onValueChange={(value) => {
+                        const newUnit = value;
+                        let newValue = localTimeoutInterval.value;
+
+                        // Adjust value when switching units to meet requirements
+                        if (newUnit === "minutes") {
+                          // When switching to minutes, default to 20 minutes if current value is less
+                          newValue = Math.max(20, Math.min(480, newValue));
+                          if (newValue < 20) newValue = 20;
+                        } else if (newUnit === "hours") {
+                          // When switching to hours, ensure it's within 1-5 hour range
+                          newValue = Math.max(1, Math.min(5, newValue));
+                          if (newValue > 5) newValue = 5;
+                        }
+
                         setLocalTimeoutInterval({
-                          ...localTimeoutInterval,
-                          unit: value,
-                        })
-                      }
+                          value: newValue,
+                          unit: newUnit,
+                        });
+                      }}
                     >
                       <SelectTrigger className="w-32 border border-input">
                         <SelectValue />
@@ -283,8 +311,12 @@ export function SettingsDialog({
                   </div>
                   {!isValidInterval() && (
                     <p className="text-sm text-destructive mt-2">
-                      Interval must be between 1 and 480{" "}
+                      Interval must be between{" "}
+                      {localTimeoutInterval.unit === "minutes" ? "20" : "1"} and{" "}
+                      {localTimeoutInterval.unit === "minutes" ? "480" : "5"}{" "}
                       {localTimeoutInterval.unit}
+                      {localTimeoutInterval.unit === "minutes" && " (minimum 20 minutes)"}
+                      {localTimeoutInterval.unit === "hours" && " (maximum 5 hours)"}
                     </p>
                   )}
                 </CardContent>
