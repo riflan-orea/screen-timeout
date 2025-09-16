@@ -58,6 +58,52 @@ export default function TimeoutReminderApp() {
     }
   }
 
+  const handleResubscribe = async () => {
+    try {
+      // Force re-request notification permissions
+      const permission = await Notification.requestPermission()
+
+      if (permission === "granted") {
+        await notification.showTimeoutReminder("Successfully re-subscribed to notifications! 🎉")
+      } else if (permission === "denied") {
+        await notification.showTimeoutReminder("Notification permission was denied. You can try again or check your browser settings.")
+      } else {
+        await notification.showTimeoutReminder("Notification permission is set to default. Enable notifications to receive reminders.")
+      }
+
+      // Force a re-render by updating state
+      setTimeout(() => {
+        window.location.reload()
+      }, 1000)
+    } catch (error) {
+      console.error("Error re-subscribing to notifications:", error)
+      await notification.showTimeoutReminder("Failed to re-subscribe to notifications. Please try again.")
+    }
+  }
+
+  const handleRefreshServiceWorker = async () => {
+    try {
+      if ("serviceWorker" in navigator) {
+        // Unregister existing service worker
+        const registrations = await navigator.serviceWorker.getRegistrations()
+        for (const registration of registrations) {
+          await registration.unregister()
+        }
+
+        // Re-register service worker
+        const registration = await navigator.serviceWorker.register("/sw.js")
+        console.log("[SW] Service worker refreshed:", registration)
+
+        await notification.showTimeoutReminder("Service worker refreshed successfully! 🔄")
+      } else {
+        await notification.showTimeoutReminder("Service workers are not supported in this browser.")
+      }
+    } catch (error) {
+      console.error("Error refreshing service worker:", error)
+      await notification.showTimeoutReminder("Failed to refresh service worker. Please try again.")
+    }
+  }
+
 
 
   const formatActiveHours = () => {
@@ -114,6 +160,9 @@ export default function TimeoutReminderApp() {
                 timeoutInterval={timeoutInterval}
                 onTimeoutIntervalChange={setTimeoutInterval}
                 onTimerReset={timeoutReminder.resetTimer}
+                onResubscribe={handleResubscribe}
+                onRefreshServiceWorker={handleRefreshServiceWorker}
+                hasBackgroundSupport={notification.hasBackgroundSupport}
               />
 
               {/* Theme Toggle */}
