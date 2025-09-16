@@ -314,11 +314,6 @@ export default function TimeoutReminderApp() {
                   Timer is disabled outside active hours ({formatActiveHours()})
                 </p>
               )}
-              {notification.isEnabled && notification.hasBackgroundSupport && (
-                <p className="text-xs text-success mt-3">
-                  ✓ Background notifications enabled - you'll receive reminders even when the app is closed
-                </p>
-              )}
               {timeoutReminder.isStarting && (
                 <p className="text-xs text-blue-600 mt-3">
                   ⏳ Starting timer...
@@ -334,6 +329,23 @@ export default function TimeoutReminderApp() {
                   ⏰ Timer will start automatically when within active hours
                 </p>
               )}
+
+              {/* App Usage Requirements */}
+              <div className="mt-6 pt-4 border-t">
+                <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <Info className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                    <div className="space-y-2">
+                      <div className="font-medium text-blue-900 dark:text-blue-100">Important Usage Notes:</div>
+                      <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
+                        <li>• This application should remain open in your browser while using it</li>
+                        <li>• Notification features are currently supported only in Chromium-based browsers (Chrome, Edge, etc.)</li>
+                        <li>• For the best experience, keep the app installed in your device and keep the app open</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
