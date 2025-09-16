@@ -112,6 +112,56 @@ self.addEventListener("message", (event) => {
       })
     }, delay)
   }
+
+  if (event.data && event.data.type === "CHECK_PUSH_SUBSCRIPTION") {
+    // Check current push subscription status
+    self.registration.pushManager.getSubscription()
+      .then(subscription => {
+        event.ports[0].postMessage({
+          type: "PUSH_SUBSCRIPTION_STATUS",
+          isSubscribed: !!subscription,
+          subscription: subscription
+        })
+      })
+      .catch(error => {
+        console.error('[SW] Error checking push subscription:', error)
+        event.ports[0].postMessage({
+          type: "PUSH_SUBSCRIPTION_ERROR",
+          error: error.message
+        })
+      })
+  }
+
+  if (event.data && event.data.type === "RESET_PUSH_SUBSCRIPTION") {
+    // Reset push subscription
+    self.registration.pushManager.getSubscription()
+      .then(subscription => {
+        if (subscription) {
+          return subscription.unsubscribe()
+        }
+        return true
+      })
+      .then(() => {
+        // Resubscribe
+        return self.registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: null
+        })
+      })
+      .then(newSubscription => {
+        event.ports[0].postMessage({
+          type: "PUSH_SUBSCRIPTION_RESET_SUCCESS",
+          subscription: newSubscription
+        })
+      })
+      .catch(error => {
+        console.error('[SW] Error resetting push subscription:', error)
+        event.ports[0].postMessage({
+          type: "PUSH_SUBSCRIPTION_RESET_ERROR",
+          error: error.message
+        })
+      })
+  }
 })
 
 self.addEventListener("notificationclick", (event) => {

@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect } from "react"
-import { Clock, Play, Pause, Info, Wifi, WifiOff } from "lucide-react"
+import { Clock, Play, Pause, Info, Wifi, WifiOff, AlertTriangle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -114,6 +114,7 @@ export default function TimeoutReminderApp() {
                 timeoutInterval={timeoutInterval}
                 onTimeoutIntervalChange={setTimeoutInterval}
                 onTimerReset={timeoutReminder.resetTimer}
+                pushSubscription={notification.pushSubscription}
               />
 
               {/* Theme Toggle */}
@@ -143,6 +144,29 @@ export default function TimeoutReminderApp() {
               <WifiOff className="h-4 w-4" />
               <AlertDescription>
                 Background notifications are not available. Notifications will only work while the app is open.
+                {notification.pushSubscription?.error && (
+                  <span className="block mt-1 text-sm">
+                    Push subscription error: {notification.pushSubscription.error}
+                  </span>
+                )}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Push Subscription Error Alert */}
+          {notification.isEnabled && notification.pushSubscription?.error && (
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                Push notification subscription issue: {notification.pushSubscription.error}
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="ml-2 h-6 text-xs"
+                  onClick={notification.pushSubscription.clearError}
+                >
+                  Clear
+                </Button>
               </AlertDescription>
             </Alert>
           )}
@@ -156,6 +180,7 @@ export default function TimeoutReminderApp() {
                   <CardDescription>
                     {timeoutReminder.isWithinActiveHours ? "Within active hours" : "Outside active hours"}
                     {notification.hasBackgroundSupport && " • Background notifications enabled"}
+                    {notification.hasPushSupport && " • Push subscription active"}
                   </CardDescription>
                 </div>
                 <Badge variant={timeoutReminder.isActive ? "default" : "secondary"}>

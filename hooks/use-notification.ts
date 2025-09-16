@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { useServiceWorker } from "./use-service-worker"
+import { usePushSubscription } from "./use-push-subscription"
 
 interface NotificationOptions {
   title: string
@@ -25,6 +26,7 @@ export function useNotification() {
   })
 
   const { isSupported: swSupported, isRegistered: swRegistered, scheduleNotification } = useServiceWorker()
+  const pushSubscription = usePushSubscription()
 
   // Initialize notification state
   useEffect(() => {
@@ -210,13 +212,15 @@ export function useNotification() {
   )
 
   const isEnabled = state.isSupported && state.permission === "granted"
-  const hasBackgroundSupport = swSupported && swRegistered
+  const hasBackgroundSupport = swSupported && swRegistered && pushSubscription.isSubscribed
+  const hasPushSupport = pushSubscription.isSupported && pushSubscription.isSubscribed
 
   return {
     isSupported: state.isSupported,
     permission: state.permission,
     isEnabled,
     hasBackgroundSupport, // Added background support indicator
+    hasPushSupport, // Added push subscription support indicator
     lastNotificationTime: state.lastNotificationTime,
     requestPermission,
     showNotification,
@@ -224,5 +228,7 @@ export function useNotification() {
     scheduleTimeoutReminder, // Added scheduled notification method
     playNotificationSound,
     triggerVibration,
+    // Push subscription methods
+    pushSubscription,
   }
 }
