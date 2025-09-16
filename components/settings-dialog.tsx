@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Settings, Clock, Bell, Info } from "lucide-react"
+import { Settings, Clock, Bell, Info, RotateCcw, AlertTriangle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -10,7 +10,18 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
 } from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -42,6 +53,7 @@ export function SettingsDialog({
   const [localActiveHours, setLocalActiveHours] = useState(activeHours)
   const [localTimeoutInterval, setLocalTimeoutInterval] = useState(timeoutInterval)
   const [isOpen, setIsOpen] = useState(false)
+  const [showResetConfirm, setShowResetConfirm] = useState(false)
 
   useEffect(() => {
     setLocalActiveHours(activeHours)
@@ -72,6 +84,13 @@ export function SettingsDialog({
     setIsOpen(false)
   }
 
+  const handleResetTimer = () => {
+    if (onTimerReset) {
+      onTimerReset()
+      setShowResetConfirm(false)
+    }
+  }
+
   const [canEnableNotifications, setCanEnableNotifications] = useState(false)
 
   useEffect(() => {
@@ -95,6 +114,7 @@ export function SettingsDialog({
   const canSave = isValidTimeRange() && isValidInterval()
 
   return (
+    <>
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button variant="ghost" size="icon">
@@ -112,7 +132,7 @@ export function SettingsDialog({
 
         <div className="py-4">
           <Tabs defaultValue="general" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="general" className="flex items-center gap-2">
                 <Clock className="h-4 w-4" />
                 General
@@ -120,6 +140,10 @@ export function SettingsDialog({
               <TabsTrigger value="notifications" className="flex items-center gap-2">
                 <Bell className="h-4 w-4" />
                 Notifications
+              </TabsTrigger>
+              <TabsTrigger value="timer" className="flex items-center gap-2">
+                <RotateCcw className="h-4 w-4" />
+                Timer
               </TabsTrigger>
             </TabsList>
 
@@ -256,6 +280,46 @@ export function SettingsDialog({
                 </CardContent>
               </Card>
             </TabsContent>
+
+            <TabsContent value="timer" className="space-y-6 mt-6">
+              {/* Timer Management Section */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <RotateCcw className="h-4 w-4" />
+                    Timer Management
+                  </CardTitle>
+                  <CardDescription>Manage your current timer session</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-4">
+                    <div className="p-4 bg-muted rounded-lg">
+                      <h4 className="font-medium mb-2">Reset Current Timer</h4>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        This will reset your current timer session and start a fresh countdown. Your last reminder time will be cleared.
+                      </p>
+                      <Button 
+                        variant="outline" 
+                        className="w-full"
+                        onClick={() => setShowResetConfirm(true)}
+                        disabled={!onTimerReset}
+                      >
+                        <RotateCcw className="h-4 w-4 mr-2" />
+                        Reset Timer
+                      </Button>
+                    </div>
+                    
+                    {!onTimerReset && (
+                      <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                        <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                          Timer reset is not available at the moment. Please ensure the timer is properly initialized.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
           </Tabs>
         </div>
 
@@ -269,5 +333,32 @@ export function SettingsDialog({
         </div>
       </DialogContent>
     </Dialog>
+    
+    {/* Reset Confirmation Dialog */}
+    <AlertDialog open={showResetConfirm} onOpenChange={setShowResetConfirm}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-yellow-500" />
+            Confirm Timer Reset
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            Are you sure you want to reset the current timer? This action will:
+            <ul className="mt-2 ml-4 list-disc text-left">
+              <li>Clear your current timer session</li>
+              <li>Reset the last reminder time</li>
+              <li>Start a fresh countdown from now</li>
+            </ul>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={handleResetTimer}>
+            Reset Timer
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   )
 }
